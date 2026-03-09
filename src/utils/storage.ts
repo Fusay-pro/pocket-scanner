@@ -26,6 +26,16 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+// ─── In-memory cache ──────────────────────────────────────────────────────────
+// Persists across tab switches (SPA), invalidated on any write.
+
+const productCache = new Map<string, Product[]>();
+const storeCache: { data: Store[] | null } = { data: null };
+
+function invalidateProductCache(storeId: string) { productCache.delete(storeId); }
+function invalidateAllProductCache() { productCache.clear(); }
+function invalidateStoreCache() { storeCache.data = null; }
+
 const LS_STORES = 'pocket_scanner_stores';
 const LS_PRODUCTS = 'pocket_scanner_products';
 
@@ -59,14 +69,17 @@ function rowToProduct(row: any): Product {
 // ─── STORES ───────────────────────────────────────────────────────────────────
 
 export async function getStores(): Promise<Store[]> {
+  if (storeCache.data) return storeCache.data;
   if (!isSupabaseConfigured) return lsGet<Store>(LS_STORES);
   const { data, error } = await supabase
     .from('stores').select('*').order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []).map(rowToStore);
+  storeCache.data = (data ?? []).map(rowToStore);
+  return storeCache.data;
 }
 
 export async function saveStore(store: Omit<Store, 'id' | 'createdAt'>): Promise<Store> {
+  invalidateStoreCache();
   if (!isSupabaseConfigured) {
     const stores = lsGet<Store>(LS_STORES);
     const newStore: Store = { ...store, id: generateId(), createdAt: new Date().toISOString() };
@@ -92,6 +105,7 @@ export async function saveStore(store: Omit<Store, 'id' | 'createdAt'>): Promise
 }
 
 export async function updateStore(id: string, updates: Partial<Omit<Store, 'id' | 'createdAt'>>): Promise<void> {
+  invalidateStoreCache();
   if (!isSupabaseConfigured) {
     lsSet(LS_STORES, lsGet<Store>(LS_STORES).map(s => s.id === id ? { ...s, ...updates } : s));
     return;
@@ -101,6 +115,8 @@ export async function updateStore(id: string, updates: Partial<Omit<Store, 'id' 
 }
 
 export async function deleteStore(id: string): Promise<void> {
+  invalidateStoreCache();
+  invalidateAllProductCache();
   if (!isSupabaseConfigured) {
     lsSet(LS_STORES, lsGet<Store>(LS_STORES).filter(s => s.id !== id));
     lsSet(LS_PRODUCTS, lsGet<Product>(LS_PRODUCTS).filter(p => p.storeId !== id));
@@ -121,14 +137,18 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function getProductsByStore(storeId: string): Promise<Product[]> {
+  if (productCache.has(storeId)) return productCache.get(storeId)!;
   if (!isSupabaseConfigured) return lsGet<Product>(LS_PRODUCTS).filter(p => p.storeId === storeId);
   const { data, error } = await supabase
     .from('products').select('*').eq('store_id', storeId).order('added_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []).map(rowToProduct);
+  const products = (data ?? []).map(rowToProduct);
+  productCache.set(storeId, products);
+  return products;
 }
 
 export async function saveProduct(product: Omit<Product, 'id' | 'addedAt'>): Promise<Product> {
+  invalidateProductCache(product.storeId);
   if (!isSupabaseConfigured) {
     const products = lsGet<Product>(LS_PRODUCTS);
     const newProduct: Product = { ...product, id: generateId(), addedAt: new Date().toISOString() };
@@ -148,6 +168,7 @@ export async function saveProduct(product: Omit<Product, 'id' | 'addedAt'>): Pro
 }
 
 export async function updateProduct(id: string, updates: Partial<Omit<Product, 'id' | 'addedAt'>>): Promise<void> {
+  invalidateAllProductCache();
   if (!isSupabaseConfigured) {
     lsSet(LS_PRODUCTS, lsGet<Product>(LS_PRODUCTS).map(p => p.id === id ? { ...p, ...updates } : p));
     return;
@@ -168,6 +189,7 @@ export async function updateProduct(id: string, updates: Partial<Omit<Product, '
 }
 
 export async function deleteProduct(id: string): Promise<void> {
+  invalidateAllProductCache();
   if (!isSupabaseConfigured) {
     lsSet(LS_PRODUCTS, lsGet<Product>(LS_PRODUCTS).filter(p => p.id !== id));
     return;
@@ -177,6 +199,7 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 export async function deleteAllProductsByStore(storeId: string): Promise<void> {
+  invalidateProductCache(storeId);
   if (!isSupabaseConfigured) {
     lsSet(LS_PRODUCTS, lsGet<Product>(LS_PRODUCTS).filter(p => p.storeId !== storeId));
     return;
