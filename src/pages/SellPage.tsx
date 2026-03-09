@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { getStores, getProductsByStore, updateProduct, recordSale } from '../utils/storage';
+import { useSettings } from '../contexts/SettingsContext';
+import { t } from '../i18n';
 import StoreTabBar from '../components/StoreTabBar';
 import type { Store, Product } from '../types';
 
@@ -18,6 +20,8 @@ interface CartItem {
 export default function SellPage() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
+  const { lang } = useSettings();
+  const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
 
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -169,12 +173,12 @@ export default function SellPage() {
         <button className="btn-icon" onClick={() => navigate('/')}><ArrowLeft size={20} /></button>
         <div className="header-title flex-1">
           <ShoppingCart size={20} />
-          <h1>Sell</h1>
+          <h1>{tr('sellTitle')}</h1>
         </div>
         {store && <span className="store-badge">{store.name}</span>}
       </header>
 
-      {done && <div className="toast success"><CheckCircle size={18} /> Sale recorded!</div>}
+      {done && <div className="toast success"><CheckCircle size={18} /> {tr('saleRecorded')}</div>}
       {error && <div className="error-bar" onClick={() => setError('')}>{error}</div>}
 
       {/* Scanner */}
@@ -184,13 +188,13 @@ export default function SellPage() {
           {!scanning && (
             <div className="scanner-placeholder">
               <ScanLine size={36} strokeWidth={1} />
-              <p>Scan barcode to add item</p>
+              <p>{tr('scanBarcodeToAdd')}</p>
             </div>
           )}
         </div>
         <div className="scanner-controls">
           <button className={scanning ? 'btn-secondary' : 'btn-primary'} onClick={scanning ? stopScanner : startScanner}>
-            {scanning ? <><CameraOff size={16} /> Stop</> : <><Camera size={16} /> Scan Barcode</>}
+            {scanning ? <><CameraOff size={16} /> {tr('stopBtn')}</> : <><Camera size={16} /> {tr('scanBarcode')}</>}
           </button>
         </div>
       </div>
@@ -202,7 +206,7 @@ export default function SellPage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search product by name…"
+            placeholder={tr('searchProductName')}
           />
         </div>
         {searchResults.length > 0 && (
@@ -212,7 +216,7 @@ export default function SellPage() {
                 <div className="search-result-name">{p.name}</div>
                 <div className="search-result-meta">
                   <span>{p.category}</span>
-                  <span>Stock: {p.quantity} {p.unit}</span>
+                  <span>{tr('stockLabel')} {p.quantity} {p.unit}</span>
                 </div>
               </button>
             ))}
@@ -223,13 +227,13 @@ export default function SellPage() {
       {/* Cart */}
       <div className="cart-section">
         <div className="cart-header">
-          <h2>Cart {cartTotal > 0 && <span className="cart-count">{cartTotal}</span>}</h2>
+          <h2>{tr('cartTitle')} {cartTotal > 0 && <span className="cart-count">{cartTotal}</span>}</h2>
         </div>
 
         {cart.length === 0 ? (
           <div className="cart-empty">
             <Package size={32} strokeWidth={1} />
-            <p>No items yet. Scan or search a product.</p>
+            <p>{tr('cartEmpty')}</p>
           </div>
         ) : (
           <>
@@ -238,7 +242,7 @@ export default function SellPage() {
                 <div key={item.product.id} className="cart-item">
                   <div className="cart-item-info">
                     <p className="cart-item-name">{item.product.name}</p>
-                    <p className="cart-item-meta">{item.product.category} · Stock: {item.product.quantity}</p>
+                    <p className="cart-item-meta">{item.product.category} · {tr('stockLabel')} {item.product.quantity}</p>
                   </div>
                   <div className="cart-qty-controls">
                     <button className="qty-btn" onClick={() => updateQty(item.product.id, -1)} disabled={item.qty <= 1}>
@@ -263,8 +267,8 @@ export default function SellPage() {
               </span>
               <button className="btn-primary sell-confirm-btn" onClick={handleSell} disabled={processing}>
                 {processing
-                  ? <><Loader2 size={16} className="spin" /> Processing…</>
-                  : <><CheckCircle size={16} /> Confirm Sale</>}
+                  ? <><Loader2 size={16} className="spin" /> {tr('processingLabel')}</>
+                  : <><CheckCircle size={16} /> {tr('confirmSale')}</>}
               </button>
             </div>
           </>

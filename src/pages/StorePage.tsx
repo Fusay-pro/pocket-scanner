@@ -16,6 +16,7 @@ import { getExpiryStatus, formatDate } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { t } from '../i18n';
 import StoreTabBar from '../components/StoreTabBar';
 import type { Store, Product } from '../types';
 
@@ -25,7 +26,8 @@ export default function StorePage() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { lowStockThreshold } = useSettings();
+  const { lang, lowStockThreshold } = useSettings();
+  const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
 
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -185,7 +187,7 @@ export default function StorePage() {
             </button>
           )}
           <button className="btn-primary scan-btn" onClick={() => navigate(`/store/${storeId}/scan`)}>
-            <ScanLine size={18} /> Scan
+            <ScanLine size={18} /> {tr('scanBtn')}
           </button>
         </div>
       </header>
@@ -193,12 +195,12 @@ export default function StorePage() {
       {/* Role badge for workers */}
       {isSupabaseConfigured && role === 'worker' && (
         <div className="role-bar role-worker">
-          <Shield size={14} /> Worker — scan &amp; add only
+          <Shield size={14} /> {tr('workerRoleBar')}
         </div>
       )}
       {isSupabaseConfigured && role === 'owner' && (
         <div className="role-bar role-owner">
-          <ShieldCheck size={14} /> Owner
+          <ShieldCheck size={14} /> {tr('ownerRoleBar')}
         </div>
       )}
 
@@ -209,7 +211,7 @@ export default function StorePage() {
         <div className="modal-overlay" onClick={() => setShowMembers(false)}>
           <div className="modal members-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header-row">
-              <h2><Users size={18} /> Members</h2>
+              <h2><Users size={18} /> {tr('membersTitle')}</h2>
               <button className="btn-icon" onClick={() => setShowMembers(false)}><X size={18} /></button>
             </div>
 
@@ -227,8 +229,8 @@ export default function StorePage() {
                 onChange={e => setInviteRole(e.target.value as MemberRole)}
                 className="invite-role-select"
               >
-                <option value="worker">Worker</option>
-                <option value="owner">Owner</option>
+                <option value="worker">{tr('workerOption')}</option>
+                <option value="owner">{tr('ownerRoleBar')}</option>
               </select>
               <button className="btn-primary" onClick={handleInvite} disabled={!inviteEmail.trim() || inviting}>
                 {inviting ? <Loader2 size={14} className="spin" /> : <UserPlus size={14} />}
@@ -241,12 +243,12 @@ export default function StorePage() {
               <>
                 {members.length > 0 && (
                   <div className="member-list">
-                    <p className="member-section-label">Current Members</p>
+                    <p className="member-section-label">{tr('currentMembers')}</p>
                     {members.map(m => (
                       <div key={m.userId} className="member-row">
                         <div className="member-info">
                           <span className="member-email">{m.email}</span>
-                          {m.userId === user?.id && <span className="member-you">(you)</span>}
+                          {m.userId === user?.id && <span className="member-you">{tr('youLabel')}</span>}
                         </div>
                         <div className="member-actions">
                           <select
@@ -255,8 +257,8 @@ export default function StorePage() {
                             disabled={m.userId === user?.id}
                             className={`role-select role-${m.role}`}
                           >
-                            <option value="owner">Owner</option>
-                            <option value="worker">Worker</option>
+                            <option value="owner">{tr('ownerRoleBar')}</option>
+                            <option value="worker">{tr('workerOption')}</option>
                           </select>
                           {m.userId !== user?.id && (
                             <button className="btn-danger-ghost" onClick={() => handleRemoveMember(m.userId)}>
@@ -271,7 +273,7 @@ export default function StorePage() {
 
                 {invitations.length > 0 && (
                   <div className="member-list">
-                    <p className="member-section-label">Pending Invitations</p>
+                    <p className="member-section-label">{tr('pendingInvitations')}</p>
                     {invitations.map(inv => (
                       <div key={inv.id} className="member-row">
                         <div className="member-info">
@@ -288,7 +290,7 @@ export default function StorePage() {
 
                 {members.length === 0 && invitations.length === 0 && (
                   <p style={{ fontSize: '13px', color: '#718096', textAlign: 'center', padding: '12px 0' }}>
-                    No members yet. Invite someone above.
+                    {tr('noMembersYet')}
                   </p>
                 )}
               </>
@@ -298,7 +300,7 @@ export default function StorePage() {
       )}
 
       {loading ? (
-        <div className="empty-state"><Loader2 size={32} className="spin" /><p>Loading…</p></div>
+        <div className="empty-state"><Loader2 size={32} className="spin" /><p>{tr('loading')}</p></div>
       ) : (
         <>
           {(expiredCount > 0 || soonCount > 0 || lowStockCount > 0) && (
@@ -306,19 +308,19 @@ export default function StorePage() {
               {expiredCount > 0 && (
                 <div className="alert alert-expired" onClick={() => setFilter('expired')}>
                   <AlertTriangle size={16} />
-                  {expiredCount} expired item{expiredCount !== 1 ? 's' : ''}
+                  {expiredCount} {lang === 'th' ? tr('expiredItemsLabel') : `expired item${expiredCount !== 1 ? 's' : ''}`}
                 </div>
               )}
               {soonCount > 0 && (
                 <div className="alert alert-soon" onClick={() => setFilter('soon')}>
                   <Clock size={16} />
-                  {soonCount} expiring soon
+                  {soonCount} {tr('expiringSoonLabel')}
                 </div>
               )}
               {lowStockCount > 0 && (
                 <div className="alert alert-low" onClick={() => setFilter('low')}>
                   <TrendingDown size={16} />
-                  {lowStockCount} low stock
+                  {lowStockCount} {tr('lowStockAlertLabel')}
                 </div>
               )}
             </div>
@@ -327,14 +329,14 @@ export default function StorePage() {
           <div className="toolbar">
             <div className="search-box">
               <Search size={16} />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products…" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('searchProductsPlaceholder')} />
             </div>
             <div className="filter-tabs">
               {(['all', 'expired', 'soon', 'ok', 'low'] as FilterType[]).map(f => (
                 <button key={f}
                   className={`filter-tab ${filter === f ? 'active' : ''} filter-${f}`}
                   onClick={() => setFilter(f)}>
-                  {f === 'all' ? 'All' : f === 'expired' ? 'Expired' : f === 'soon' ? 'Soon' : f === 'ok' ? 'OK' : 'Low'}
+                  {f === 'all' ? tr('filterAll') : f === 'expired' ? tr('filterExpired') : f === 'soon' ? tr('filterSoon') : f === 'ok' ? tr('filterOk') : tr('filterLow')}
                 </button>
               ))}
             </div>
@@ -343,10 +345,10 @@ export default function StorePage() {
           {filtered.length === 0 ? (
             <div className="empty-state">
               <Package size={48} strokeWidth={1} />
-              <p>{products.length === 0 ? 'No products yet. Start scanning!' : 'No products match.'}</p>
+              <p>{products.length === 0 ? tr('noProductsYet') : tr('noProductsMatch')}</p>
               {products.length === 0 && (
                 <button className="btn-primary" onClick={() => navigate(`/store/${storeId}/scan`)}>
-                  <ScanLine size={16} /> Start Scanning
+                  <ScanLine size={16} /> {tr('startScanningBtn')}
                 </button>
               )}
             </div>
@@ -370,12 +372,12 @@ export default function StorePage() {
                           <span>{product.category}</span>
                           {product.barcode && <span>#{product.barcode}</span>}
                           <span>
-                            Qty: {product.quantity} {product.unit}
-                            {isLowStock(product) && <span className="low-badge">LOW</span>}
+                            {tr('qtyPrefix')} {product.quantity} {product.unit}
+                            {isLowStock(product) && <span className="low-badge">{tr('lowBadge')}</span>}
                           </span>
                         </div>
                         <div className={`expiry-text text-${status}`}>
-                          {status === 'expired' ? 'EXPIRED: ' : 'Expires: '}
+                          {status === 'expired' ? tr('expiredPrefix') : tr('expiresPrefix')}{' '}
                           {formatDate(product.expiryDate)}
                         </div>
                       </div>
@@ -396,7 +398,7 @@ export default function StorePage() {
           )}
 
           <div className="stats-bar">
-            <Filter size={14} /> {filtered.length} of {products.length} products
+            <Filter size={14} /> {filtered.length} of {products.length} {tr('productsCount')}
           </div>
         </>
       )}

@@ -8,21 +8,25 @@ import {
 import { getProducts, updateProduct, deleteProduct, getStoreRole, type MemberRole } from '../utils/storage';
 import { getExpiryStatus, formatDate } from '../types';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { useSettings } from '../contexts/SettingsContext';
+import { t } from '../i18n';
 import type { Product } from '../types';
 
 const CATEGORIES = ['Food', 'Beverage', 'Dairy', 'Produce', 'Bakery', 'Frozen', 'Snacks', 'Personal Care', 'Cleaning', 'Other'];
 const UNITS = ['pcs', 'box', 'pack', 'kg', 'g', 'L', 'mL', 'bottle', 'can', 'bag'];
 
-const STATUS_CONFIG = {
-  expired: { bg: 'var(--danger)',   light: 'var(--danger-light)',   icon: AlertTriangle, label: 'EXPIRED' },
-  soon:    { bg: 'var(--warn)',     light: 'var(--warn-light)',     icon: Clock,         label: 'Expiring Soon' },
-  ok:      { bg: 'var(--success)',  light: 'var(--success-light)',  icon: CheckCircle,   label: 'In Date' },
-  none:    { bg: 'var(--text-muted)', light: 'var(--bg)',           icon: Calendar,      label: 'No Expiry' },
+const STATUS_CONFIG_KEYS = {
+  expired: { bg: 'var(--danger)',   light: 'var(--danger-light)',   icon: AlertTriangle, labelKey: 'statusExpired' as const },
+  soon:    { bg: 'var(--warn)',     light: 'var(--warn-light)',     icon: Clock,         labelKey: 'statusSoon' as const },
+  ok:      { bg: 'var(--success)',  light: 'var(--success-light)',  icon: CheckCircle,   labelKey: 'statusOk' as const },
+  none:    { bg: 'var(--text-muted)', light: 'var(--bg)',           icon: Calendar,      labelKey: 'statusNone' as const },
 };
 
 export default function ProductPage() {
   const { storeId, productId } = useParams<{ storeId: string; productId: string }>();
   const navigate = useNavigate();
+  const { lang } = useSettings();
+  const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [product, setProduct] = useState<Product | null>(null);
   const [role, setRole] = useState<MemberRole | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,11 +101,11 @@ export default function ProductPage() {
   );
 
   if (!product) return (
-    <div className="page"><div className="empty-state">Product not found.</div></div>
+    <div className="page"><div className="empty-state">{tr('productNotFound')}</div></div>
   );
 
   const status = getExpiryStatus(form.expiryDate || null);
-  const cfg = STATUS_CONFIG[status];
+  const cfg = STATUS_CONFIG_KEYS[status];
   const StatusIcon = cfg.icon;
 
   return (
@@ -111,7 +115,7 @@ export default function ProductPage() {
           <ArrowLeft size={20} />
         </button>
         <div className="header-title flex-1">
-          <h1>Product Details</h1>
+          <h1>{tr('productDetailsTitle')}</h1>
         </div>
         {isOwner && (
           <button className="btn-danger-ghost" onClick={handleDelete} title="Delete product">
@@ -120,7 +124,7 @@ export default function ProductPage() {
         )}
       </header>
 
-      {saved && <div className="toast success"><CheckCircle size={18} /> Saved!</div>}
+      {saved && <div className="toast success"><CheckCircle size={18} /> {tr('savedToast')}</div>}
       {error && <div className="error-bar" onClick={() => setError('')}>{error}</div>}
 
       {/* ── Hero ── */}
@@ -135,7 +139,7 @@ export default function ProductPage() {
             {new Date(product.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
         </div>
-        <h2 className="pp-product-name">{form.name || <span style={{ opacity: 0.4 }}>Unnamed product</span>}</h2>
+        <h2 className="pp-product-name">{form.name || <span style={{ opacity: 0.4 }}>{tr('unnamedProduct')}</span>}</h2>
         {form.barcode && (
           <div className="pp-barcode-row">
             <Hash size={13} />
@@ -147,11 +151,11 @@ export default function ProductPage() {
             <StatusIcon size={22} />
           </div>
           <div className="pp-status-text">
-            <span className="pp-status-label">{cfg.label}</span>
+            <span className="pp-status-label">{tr(cfg.labelKey)}</span>
             <span className="pp-status-date">
               {status !== 'none'
                 ? formatDate(form.expiryDate || null)
-                : 'Set an expiry date below'}
+                : tr('setExpiryBelow')}
             </span>
           </div>
         </div>
@@ -161,36 +165,36 @@ export default function ProductPage() {
       <div className="pp-body">
 
         <div className="pp-section">
-          <div className="pp-section-label"><Hash size={12} /> Identity</div>
+          <div className="pp-section-label"><Hash size={12} /> {tr('sectionIdentity')}</div>
           <div className="pp-card">
             <div className="pp-field">
-              <label>Barcode</label>
-              <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder="Scan or enter manually" />
+              <label>{tr('barcodeLabel')}</label>
+              <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder={tr('scanOrEnterManually')} />
             </div>
             <div className="pp-divider" />
             <div className="pp-field">
-              <label>Product Name <span className="pp-required">*</span></label>
+              <label>{tr('productNameLabel')} <span className="pp-required">*</span></label>
               <input value={form.name} onChange={e => handleField('name', e.target.value)} placeholder="e.g. Whole Milk 1L" />
             </div>
           </div>
         </div>
 
         <div className="pp-section">
-          <div className="pp-section-label"><Layers size={12} /> Stock</div>
+          <div className="pp-section-label"><Layers size={12} /> {tr('sectionStockLabel')}</div>
           <div className="pp-card">
             <div className="pp-field-row">
               <div className="pp-field pp-field-grow">
-                <label>Category</label>
+                <label>{tr('categoryLabel')}</label>
                 <select value={form.category} onChange={e => handleField('category', e.target.value)}>
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div className="pp-field pp-field-sm">
-                <label>Qty</label>
+                <label>{tr('qtyLabel')}</label>
                 <input type="number" min="0" value={form.quantity} onChange={e => handleField('quantity', e.target.value)} />
               </div>
               <div className="pp-field pp-field-sm">
-                <label>Unit</label>
+                <label>{tr('unitLabel')}</label>
                 <select value={form.unit} onChange={e => handleField('unit', e.target.value)}>
                   {UNITS.map(u => <option key={u}>{u}</option>)}
                 </select>
@@ -198,22 +202,22 @@ export default function ProductPage() {
             </div>
             <div className="pp-divider" />
             <div className="pp-field pp-field-sm">
-              <label>Min Stock Qty</label>
+              <label>{tr('minStockQtyLabel')}</label>
               <input type="number" min="0" value={form.minQty} onChange={e => handleField('minQty', e.target.value)} placeholder="e.g. 5" />
             </div>
           </div>
         </div>
 
         <div className="pp-section">
-          <div className="pp-section-label"><DollarSign size={12} /> Pricing</div>
+          <div className="pp-section-label"><DollarSign size={12} /> {tr('sectionPricing')}</div>
           <div className="pp-card">
             <div className="pp-field-row">
               <div className="pp-field pp-field-grow">
-                <label>Cost Price (฿)</label>
+                <label>{tr('costPriceLabel')}</label>
                 <input type="number" min="0" step="0.01" value={form.costPrice} onChange={e => handleField('costPrice', e.target.value)} placeholder="0.00" />
               </div>
               <div className="pp-field pp-field-grow">
-                <label>Sell Price (฿)</label>
+                <label>{tr('sellPriceLabel')}</label>
                 <input type="number" min="0" step="0.01" value={form.sellPrice} onChange={e => handleField('sellPrice', e.target.value)} placeholder="0.00" />
               </div>
             </div>
@@ -221,24 +225,24 @@ export default function ProductPage() {
         </div>
 
         <div className="pp-section">
-          <div className="pp-section-label"><Calendar size={12} /> Expiry</div>
+          <div className="pp-section-label"><Calendar size={12} /> {tr('sectionExpiry')}</div>
           <div className="pp-card">
             <div className="pp-field">
-              <label>Expiry Date</label>
+              <label>{tr('expiryDateLabel')}</label>
               <input type="date" value={form.expiryDate} onChange={e => handleField('expiryDate', e.target.value)} />
             </div>
           </div>
         </div>
 
         <div className="pp-section">
-          <div className="pp-section-label"><Package size={12} /> Notes</div>
+          <div className="pp-section-label"><Package size={12} /> {tr('sectionNotes')}</div>
           <div className="pp-card">
             <div className="pp-field">
               <textarea
                 value={form.notes}
                 onChange={e => handleField('notes', e.target.value)}
                 rows={3}
-                placeholder="Storage instructions, supplier info…"
+                placeholder={tr('notesPlaceholder')}
               />
             </div>
           </div>
@@ -249,7 +253,7 @@ export default function ProductPage() {
           onClick={handleSave}
           disabled={!dirty || !form.name.trim() || saving}
         >
-          {saving ? <><Loader2 size={16} className="spin" /> Saving…</> : <><Save size={18} /> Save Changes</>}
+          {saving ? <><Loader2 size={16} className="spin" /> {tr('savingLabel')}</> : <><Save size={18} /> {tr('saveChanges')}</>}
         </button>
       </div>
     </div>

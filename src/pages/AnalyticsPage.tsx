@@ -11,6 +11,7 @@ import type { Store } from '../types';
 import StoreTabBar from '../components/StoreTabBar';
 import { useSettings } from '../contexts/SettingsContext';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { t } from '../i18n';
 import { ShieldOff } from 'lucide-react';
 
 interface TopProduct { name: string; category: string; totalSold: number; transactions: number; revenue: number | null; }
@@ -76,7 +77,8 @@ export default function AnalyticsPage() {
   const [store, setStore] = useState<Store | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const { analyticsRange: defaultRange } = useSettings();
+  const { lang, analyticsRange: defaultRange } = useSettings();
+  const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [range, setRange] = useState<'7d' | '30d' | 'all'>(defaultRange);
   const [error, setError] = useState('');
   const [role, setRole] = useState<MemberRole | null>(null);
@@ -118,7 +120,7 @@ export default function AnalyticsPage() {
         <button className="btn-icon" onClick={() => navigate('/')}><ArrowLeft size={20} /></button>
         <div className="header-title flex-1">
           <BarChart2 size={20} />
-          <h1>Analytics</h1>
+          <h1>{tr('analyticsTitle')}</h1>
         </div>
         {store && <span className="store-badge">{store.name}</span>}
       </header>
@@ -128,8 +130,8 @@ export default function AnalyticsPage() {
       {roleLoaded && !isOwner && (
         <div className="empty-state">
           <ShieldOff size={48} strokeWidth={1} />
-          <p>Owner access only</p>
-          <p style={{ fontSize: '13px' }}>Analytics are visible to store owners only.</p>
+          <p>{tr('ownerAccessOnly')}</p>
+          <p style={{ fontSize: '13px' }}>{tr('analyticsOwnerOnly')}</p>
         </div>
       )}
 
@@ -139,7 +141,7 @@ export default function AnalyticsPage() {
       <div className="analytics-range">
         {(['7d', '30d', 'all'] as const).map(r => (
           <button key={r} className={`range-btn ${range === r ? 'active' : ''}`} onClick={() => setRange(r)}>
-            {r === '7d' ? 'Last 7 days' : r === '30d' ? 'Last 30 days' : 'All time'}
+            {r === '7d' ? tr('last7days') : r === '30d' ? tr('last30days') : tr('allTime')}
           </button>
         ))}
       </div>
@@ -149,8 +151,8 @@ export default function AnalyticsPage() {
       ) : filteredSales.length === 0 ? (
         <div className="empty-state">
           <BarChart2 size={48} strokeWidth={1} />
-          <p>No sales data yet.</p>
-          <p style={{ fontSize: '13px' }}>Use the Sell tab to record sales.</p>
+          <p>{tr('noSalesYet')}</p>
+          <p style={{ fontSize: '13px' }}>{tr('noSalesDesc')}</p>
         </div>
       ) : (
         <div className="analytics-body">
@@ -161,14 +163,14 @@ export default function AnalyticsPage() {
               <div className="kpi-icon kpi-blue"><ShoppingCart size={18} /></div>
               <div>
                 <p className="kpi-value">{totalTransactions}</p>
-                <p className="kpi-label">Transactions</p>
+                <p className="kpi-label">{tr('transactions')}</p>
               </div>
             </div>
             <div className="kpi-card">
               <div className="kpi-icon kpi-green"><Package size={18} /></div>
               <div>
                 <p className="kpi-value">{totalUnits}</p>
-                <p className="kpi-label">Units Sold</p>
+                <p className="kpi-label">{tr('unitsSold')}</p>
               </div>
             </div>
             <div className="kpi-card">
@@ -177,7 +179,7 @@ export default function AnalyticsPage() {
                 <p className="kpi-value">
                   {totalTransactions > 0 ? (totalUnits / totalTransactions).toFixed(1) : '0'}
                 </p>
-                <p className="kpi-label">Avg per Sale</p>
+                <p className="kpi-label">{tr('avgPerSale')}</p>
               </div>
             </div>
           </div>
@@ -187,7 +189,7 @@ export default function AnalyticsPage() {
                 <div className="kpi-icon kpi-green"><TrendingUp size={18} /></div>
                 <div>
                   <p className="kpi-value">฿{totalRevenue.toFixed(0)}</p>
-                  <p className="kpi-label">Revenue</p>
+                  <p className="kpi-label">{tr('revenueLabel')}</p>
                 </div>
               </div>
             </div>
@@ -195,7 +197,7 @@ export default function AnalyticsPage() {
 
           {/* Daily trend */}
           <div className="analytics-card">
-            <h3 className="analytics-section-title"><TrendingUp size={16} /> Daily Sales (last 7 days)</h3>
+            <h3 className="analytics-section-title"><TrendingUp size={16} /> {tr('dailySales')}</h3>
             <div className="bar-chart">
               {days.map(day => (
                 <div key={day.date} className="bar-col">
@@ -223,14 +225,14 @@ export default function AnalyticsPage() {
 
           {/* Top products */}
           <div className="analytics-card">
-            <h3 className="analytics-section-title"><Trophy size={16} /> Top Products</h3>
+            <h3 className="analytics-section-title"><Trophy size={16} /> {tr('topProductsTitle')}</h3>
             <div className="top-list">
               {topProducts.map((p, i) => (
                 <div key={p.name} className="top-row">
                   <div className="top-rank">{i + 1}</div>
                   <div className="top-info">
                     <p className="top-name">{p.name}</p>
-                    <p className="top-meta">{p.category} · {p.transactions} sale{p.transactions !== 1 ? 's' : ''}</p>
+                    <p className="top-meta">{p.category} · {p.transactions} {lang === 'th' ? tr('saleLabel') : (p.transactions !== 1 ? tr('salesLabel') : tr('saleLabel'))}</p>
                     <div className="inline-bar-track">
                       <div
                         className="inline-bar-fill"
@@ -253,7 +255,7 @@ export default function AnalyticsPage() {
           {/* Category breakdown */}
           {categories.length > 0 && (
             <div className="analytics-card">
-              <h3 className="analytics-section-title"><Tag size={16} /> By Category</h3>
+              <h3 className="analytics-section-title"><Tag size={16} /> {tr('byCategory')}</h3>
               <div className="top-list">
                 {categories.map((c, i) => (
                   <div key={c.category} className="top-row">

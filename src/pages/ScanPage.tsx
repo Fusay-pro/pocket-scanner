@@ -5,6 +5,8 @@ import { ArrowLeft, ScanLine, Camera, CameraOff, CheckCircle, Save, Loader2, Clo
 import { Html5Qrcode } from 'html5-qrcode';
 import { getStores, getProductsByStore, saveProduct, receiveStock, setCachedBarcode } from '../utils/storage';
 import { lookupBarcode } from '../utils/barcodeApi';
+import { useSettings } from '../contexts/SettingsContext';
+import { t } from '../i18n';
 import type { Store, Product } from '../types';
 
 const CATEGORIES = ['Food', 'Beverage', 'Dairy', 'Produce', 'Bakery', 'Frozen', 'Snacks', 'Personal Care', 'Cleaning', 'Other'];
@@ -21,6 +23,8 @@ type Mode = 'add' | 'receive';
 export default function ScanPage() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
+  const { lang } = useSettings();
+  const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [store, setStore] = useState<Store | null>(null);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -212,22 +216,22 @@ export default function ScanPage() {
         </button>
         <div className="header-title">
           <ScanLine size={20} />
-          <h1>Scan Item</h1>
+          <h1>{tr('scanItemTitle')}</h1>
         </div>
         {store && <span className="store-badge">{store.name}</span>}
       </header>
 
-      {saved && <div className="toast success"><CheckCircle size={18} /> {mode === 'receive' ? 'Stock received!' : 'Product saved!'}</div>}
-      {scanSuccess && <div className="toast success"><CheckCircle size={18} /> Scanned: {scannedCode}</div>}
+      {saved && <div className="toast success"><CheckCircle size={18} /> {mode === 'receive' ? tr('stockReceivedToast') : tr('productSavedToast')}</div>}
+      {scanSuccess && <div className="toast success"><CheckCircle size={18} /> {tr('scannedLabel')} {scannedCode}</div>}
       {error && <div className="error-bar" onClick={() => setError('')}>{error}</div>}
 
       <div className="mode-toggle-wrap">
         <div className="mode-toggle">
           <button className={`mode-btn ${mode === 'add' ? 'active' : ''}`} onClick={() => setMode('add')}>
-            <PackagePlus size={15} /> Add New
+            <PackagePlus size={15} /> {tr('addNewMode')}
           </button>
           <button className={`mode-btn ${mode === 'receive' ? 'active' : ''}`} onClick={() => setMode('receive')}>
-            <RotateCcw size={15} /> Receive Stock
+            <RotateCcw size={15} /> {tr('receiveStockMode')}
           </button>
         </div>
       </div>
@@ -238,45 +242,45 @@ export default function ScanPage() {
           {!scanning && (
             <div className="scanner-placeholder">
               <ScanLine size={48} strokeWidth={1} />
-              <p>Camera not active</p>
+              <p>{tr('cameraNotActive')}</p>
             </div>
           )}
         </div>
         <div className="scanner-controls">
           <button className={scanning ? 'btn-secondary' : 'btn-primary'} onClick={scanning ? stopScanner : startScanner}>
-            {scanning ? <><CameraOff size={16} /> Stop Camera</> : <><Camera size={16} /> Open Camera</>}
+            {scanning ? <><CameraOff size={16} /> {tr('stopCamera')}</> : <><Camera size={16} /> {tr('openCamera')}</>}
           </button>
         </div>
       </div>
 
       {mode === 'receive' && (
         <div className="form-section" id="scan-form">
-          <h2>Receive Stock</h2>
+          <h2>{tr('receiveStockTitle')}</h2>
           <div className="form-group">
-            <label>Barcode</label>
-            <input value={receiveBarcode} onChange={e => handleReceiveBarcodeChange(e.target.value)} placeholder="Scan or enter barcode" />
+            <label>{tr('barcodeLabel')}</label>
+            <input value={receiveBarcode} onChange={e => handleReceiveBarcodeChange(e.target.value)} placeholder={tr('scanOrEnterBarcode')} />
           </div>
           {receiveProduct && (
             <>
               <div className="autofill-chip"><Sparkles size={13} /> {receiveProduct.name}</div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Qty to Receive</label>
+                  <label>{tr('qtyToReceive')}</label>
                   <input type="number" min="1" value={receiveQty} onChange={e => setReceiveQty(e.target.value)} />
                 </div>
               </div>
               <div className="form-group">
-                <label>Expiry Date *</label>
+                <label>{tr('expiryDateRequired')}</label>
                 <input type="date" value={receiveExpiry} onChange={e => setReceiveExpiry(e.target.value)} />
               </div>
               <button className="btn-primary full-width" onClick={handleReceive} disabled={!receiveQty || !receiveExpiry || saving}>
-                {saving ? <><Loader2 size={16} className="spin" /> Saving…</> : <><CheckCircle size={16} /> Receive</>}
+                {saving ? <><Loader2 size={16} className="spin" /> {tr('savingLabel')}</> : <><CheckCircle size={16} /> {tr('receiveBtn')}</>}
               </button>
             </>
           )}
           {receiveLookupDone && !receiveProduct && (
             <div className="autofill-chip" style={{ background: 'var(--warn-light)', color: 'var(--warn)' }}>
-              Barcode not found — switching to Add New…
+              {tr('barcodeNotFound')}
             </div>
           )}
           <button className="btn-secondary full-width" style={{ marginTop: '8px' }} onClick={() => { stopScanner(); navigate(`/store/${storeId}`); }}>
@@ -289,7 +293,7 @@ export default function ScanPage() {
         <>
           {recentProducts.length > 0 && (
             <div className="quick-select-section">
-              <p className="quick-select-label"><Clock size={13} /> Recently added</p>
+              <p className="quick-select-label"><Clock size={13} /> {tr('recentlyAdded')}</p>
               <div className="quick-select-grid">
                 {recentProducts.map(p => (
                   <button key={p.id} className="quick-select-chip" onClick={() => selectRecent(p)}>
@@ -302,32 +306,32 @@ export default function ScanPage() {
           )}
 
           <div className="form-section" id="scan-form">
-            <h2>Item Details</h2>
+            <h2>{tr('itemDetails')}</h2>
 
             <div className="form-group">
-              <label>Barcode</label>
-              <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder="Scan or enter manually" />
+              <label>{tr('barcodeLabel')}</label>
+              <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder={tr('scanOrEnterManually')} />
             </div>
 
             <div className="form-group">
-              <label>Product Name *</label>
+              <label>{tr('productNameLabel')} *</label>
               <input value={form.name} onChange={e => handleField('name', e.target.value)} placeholder="e.g. Whole Milk 1L" />
-              {autoFilled && <div className="autofill-chip"><Sparkles size={13} /> Auto-filled from database</div>}
+              {autoFilled && <div className="autofill-chip"><Sparkles size={13} /> {tr('autoFilledFromDb')}</div>}
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label>Category</label>
+                <label>{tr('categoryLabel')}</label>
                 <select value={form.category} onChange={e => handleField('category', e.target.value)}>
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-group form-group-sm">
-                <label>Qty</label>
+                <label>{tr('qtyLabel')}</label>
                 <input type="number" min="0" value={form.quantity} onChange={e => handleField('quantity', e.target.value)} />
               </div>
               <div className="form-group form-group-sm">
-                <label>Unit</label>
+                <label>{tr('unitLabel')}</label>
                 <select value={form.unit} onChange={e => handleField('unit', e.target.value)}>
                   {UNITS.map(u => <option key={u}>{u}</option>)}
                 </select>
@@ -335,37 +339,37 @@ export default function ScanPage() {
             </div>
 
             <div className="form-group">
-              <label>Expiry Date</label>
+              <label>{tr('expiryDateLabel')}</label>
               <input type="date" value={form.expiryDate} onChange={e => handleField('expiryDate', e.target.value)} />
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label>Cost Price (฿)</label>
+                <label>{tr('costPriceLabel')}</label>
                 <input type="number" min="0" step="0.01" value={form.costPrice} onChange={e => handleField('costPrice', e.target.value)} placeholder="0.00" />
               </div>
               <div className="form-group">
-                <label>Sell Price (฿)</label>
+                <label>{tr('sellPriceLabel')}</label>
                 <input type="number" min="0" step="0.01" value={form.sellPrice} onChange={e => handleField('sellPrice', e.target.value)} placeholder="0.00" />
               </div>
             </div>
 
             <div className="form-group form-group-sm">
-              <label>Min Stock Qty</label>
+              <label>{tr('minStockQtyLabel')}</label>
               <input type="number" min="0" value={form.minQty} onChange={e => handleField('minQty', e.target.value)} placeholder="e.g. 5" />
             </div>
 
             <div className="form-group">
-              <label>Notes</label>
-              <textarea value={form.notes} onChange={e => handleField('notes', e.target.value)} placeholder="Optional notes…" rows={2} />
+              <label>{tr('sectionNotes')}</label>
+              <textarea value={form.notes} onChange={e => handleField('notes', e.target.value)} placeholder={tr('optionalNotes')} rows={2} />
             </div>
 
             <button className="btn-primary full-width" onClick={handleSave} disabled={!form.name.trim() || saving}>
-              {saving ? <><Loader2 size={16} className="spin" /> Saving…</> : <><Save size={18} /> Save & Scan Next</>}
+              {saving ? <><Loader2 size={16} className="spin" /> {tr('savingLabel')}</> : <><Save size={18} /> {tr('saveAndScanNext')}</>}
             </button>
             <button className="btn-secondary full-width" style={{ marginTop: '8px' }}
               onClick={() => { stopScanner(); navigate(`/store/${storeId}`); }}>
-              Done
+              {tr('doneBtn')}
             </button>
           </div>
         </>

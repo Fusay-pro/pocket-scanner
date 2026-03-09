@@ -4,12 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import { Store, Warehouse, Plus, Trash2, ChevronRight, MapPin, Package, Loader2, LogOut } from 'lucide-react';
 import { getStores, saveStore, deleteStore, getProductsByStore, getStoreRole } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { t } from '../i18n';
 import type { Store as StoreType } from '../types';
 
 export default function StoreList() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { lang } = useSettings();
+  const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [stores, setStores] = useState<StoreType[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [ownerOf, setOwnerOf] = useState<Record<string, boolean>>({});
@@ -77,7 +81,7 @@ export default function StoreList() {
           <h1>Pocket Scanner</h1>
         </div>
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <button className="btn-icon" onClick={() => setShowForm(true)} title="Add store">
+          <button className="btn-icon" onClick={() => setShowForm(true)} title={tr('addStore')}>
             <Plus size={20} />
           </button>
           {isSupabaseConfigured && user && (
@@ -90,7 +94,7 @@ export default function StoreList() {
 
       {isSupabaseConfigured && user && (
         <div className="user-bar">
-          Signed in as <strong>{user.email}</strong>
+          {tr('signedInAs')} <strong>{user.email}</strong>
         </div>
       )}
 
@@ -99,19 +103,19 @@ export default function StoreList() {
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2>Add Store</h2>
-            <label>Store Name *</label>
+            <h2>{tr('addStore')}</h2>
+            <label>{tr('storeNameLabel')} *</label>
             <input value={name} onChange={e => setName(e.target.value)}
-              placeholder="e.g. Main Branch" autoFocus
+              placeholder={tr('storeNamePlaceholder')} autoFocus
               onKeyDown={e => e.key === 'Enter' && handleAdd()} />
-            <label>Location</label>
+            <label>{tr('locationLabel')}</label>
             <input value={location} onChange={e => setLocation(e.target.value)}
-              placeholder="e.g. Downtown, Floor 1"
+              placeholder={tr('locationPlaceholder')}
               onKeyDown={e => e.key === 'Enter' && handleAdd()} />
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+              <button className="btn-secondary" onClick={() => setShowForm(false)}>{tr('cancel')}</button>
               <button className="btn-primary" onClick={handleAdd} disabled={!name.trim() || saving}>
-                {saving ? <><Loader2 size={16} className="spin" /> Saving…</> : 'Add Store'}
+                {saving ? <><Loader2 size={16} className="spin" /> {tr('savingLabel')}</> : tr('addStore')}
               </button>
             </div>
           </div>
@@ -119,12 +123,12 @@ export default function StoreList() {
       )}
 
       {loading ? (
-        <div className="empty-state"><Loader2 size={32} className="spin" /><p>Loading…</p></div>
+        <div className="empty-state"><Loader2 size={32} className="spin" /><p>{tr('loading')}</p></div>
       ) : stores.length === 0 ? (
         <div className="empty-state">
           <Store size={56} strokeWidth={1} />
-          <p>No stores yet</p>
-          <button className="btn-primary" onClick={() => setShowForm(true)}>Add your first store</button>
+          <p>{tr('noStoresYet')}</p>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>{tr('addFirstStore')}</button>
         </div>
       ) : (
         <div className="card-list">
@@ -136,7 +140,7 @@ export default function StoreList() {
                   <h3>{store.name}</h3>
                   <div className="card-meta">
                     {store.location && <span><MapPin size={12} /> {store.location}</span>}
-                    <span><Package size={12} /> {counts[store.id] ?? 0} items</span>
+                    <span><Package size={12} /> {counts[store.id] ?? 0} {tr('itemsLabel')}</span>
                   </div>
                 </div>
                 <div className="card-actions">
