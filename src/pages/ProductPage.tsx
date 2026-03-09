@@ -1,0 +1,257 @@
+import { errMsg } from '../utils/errMsg';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  ArrowLeft, Save, Trash2, Package, AlertTriangle, CheckCircle,
+  Clock, Calendar, Loader2, Tag, Hash, Layers, DollarSign
+} from 'lucide-react';
+import { getProducts, updateProduct, deleteProduct, getStoreRole, type MemberRole } from '../utils/storage';
+import { getExpiryStatus, formatDate } from '../types';
+import { isSupabaseConfigured } from '../lib/supabase';
+import type { Product } from '../types';
+
+const CATEGORIES = ['Food', 'Beverage', 'Dairy', 'Produce', 'Bakery', 'Frozen', 'Snacks', 'Personal Care', 'Cleaning', 'Other'];
+const UNITS = ['pcs', 'box', 'pack', 'kg', 'g', 'L', 'mL', 'bottle', 'can', 'bag'];
+
+const STATUS_CONFIG = {
+  expired: { bg: 'var(--danger)',   light: 'var(--danger-light)',   icon: AlertTriangle, label: 'EXPIRED' },
+  soon:    { bg: 'var(--warn)',     light: 'var(--warn-light)',     icon: Clock,         label: 'Expiring Soon' },
+  ok:      { bg: 'var(--success)',  light: 'var(--success-light)',  icon: CheckCircle,   label: 'In Date' },
+  none:    { bg: 'var(--text-muted)', light: 'var(--bg)',           icon: Calendar,      label: 'No Expiry' },
+};
+
+export default function ProductPage() {
+  const { storeId, productId } = useParams<{ storeId: string; productId: string }>();
+  const navigate = useNavigate();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [role, setRole] = useState<MemberRole | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({
+    barcode: '', name: '', category: 'Food', quantity: '1',
+    unit: 'pcs', expiryDate: '', notes: '',
+    costPrice: '', sellPrice: '', minQty: '',
+  });
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+
+  const isOwner = !isSupabaseConfigured || role === 'owner';
+
+  useEffect(() => {
+    if (!productId || !storeId) return;
+    Promise.all([
+      getProducts(),
+      getStoreRole(storeId),
+    ]).then(([all, r]) => {
+      const found = all.find(p => p.id === productId) || null;
+      setProduct(found);
+      setRole(r);
+      if (found) {
+        setForm({
+          barcode: found.barcode, name: found.name, category: found.category,
+          quantity: String(found.quantity), unit: found.unit,
+          expiryDate: found.expiryDate || '', notes: found.notes,
+          costPrice: found.costPrice != null ? String(found.costPrice) : '',
+          sellPrice: found.sellPrice != null ? String(found.sellPrice) : '',
+          minQty: found.minQty != null ? String(found.minQty) : '',
+        });
+      }
+      setLoading(false);
+    }).catch(e => { setError(errMsg(e)); setLoading(false); });
+  }, [productId, storeId]);
+
+  function handleField(field: string, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }));
+    setDirty(true);
+  }
+
+  async function handleSave() {
+    if (!productId || !form.name.trim()) return;
+    setSaving(true);
+    try {
+      await updateProduct(productId, {
+        barcode: form.barcode.trim(), name: form.name.trim(),
+        category: form.category, quantity: Number(form.quantity) || 1,
+        unit: form.unit, expiryDate: form.expiryDate || null, notes: form.notes.trim(),
+        costPrice: form.costPrice !== '' ? Number(form.costPrice) : null,
+        sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : null,
+        minQty: form.minQty !== '' ? Number(form.minQty) : null,
+      });
+      setDirty(false); setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) { setError(errMsg(e)); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete() {
+    if (!productId || !confirm('Delete this product?')) return;
+    try {
+      await deleteProduct(productId);
+      navigate(`/store/${storeId}`);
+    } catch (e) { setError(errMsg(e)); }
+  }
+
+  if (loading) return (
+    <div className="page"><div className="empty-state"><Loader2 size={32} className="spin" /></div></div>
+  );
+
+  if (!product) return (
+    <div className="page"><div className="empty-state">Product not found.</div></div>
+  );
+
+  const status = getExpiryStatus(form.expiryDate || null);
+  const cfg = STATUS_CONFIG[status];
+  const StatusIcon = cfg.icon;
+
+  return (
+    <div className="page pp-page">
+      <header className="page-header">
+        <button className="btn-icon" onClick={() => navigate(`/store/${storeId}`)}>
+          <ArrowLeft size={20} />
+        </button>
+        <div className="header-title flex-1">
+          <h1>Product Details</h1>
+        </div>
+        {isOwner && (
+          <button className="btn-danger-ghost" onClick={handleDelete} title="Delete product">
+            <Trash2 size={18} />
+          </button>
+        )}
+      </header>
+
+      {saved && <div className="toast success"><CheckCircle size={18} /> Saved!</div>}
+      {error && <div className="error-bar" onClick={() => setError('')}>{error}</div>}
+
+      {/* ── Hero ── */}
+      <div className="pp-hero" style={{ '--status-color': cfg.bg, '--status-light': cfg.light } as React.CSSProperties}>
+        <div className="pp-hero-top">
+          <span className="pp-category-pill">
+            <Tag size={11} />
+            {form.category}
+          </span>
+          <span className="pp-added-meta">
+            <Package size={12} />
+            {new Date(product.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </span>
+        </div>
+        <h2 className="pp-product-name">{form.name || <span style={{ opacity: 0.4 }}>Unnamed product</span>}</h2>
+        {form.barcode && (
+          <div className="pp-barcode-row">
+            <Hash size={13} />
+            {form.barcode}
+          </div>
+        )}
+        <div className="pp-status-card">
+          <div className="pp-status-icon-wrap">
+            <StatusIcon size={22} />
+          </div>
+          <div className="pp-status-text">
+            <span className="pp-status-label">{cfg.label}</span>
+            <span className="pp-status-date">
+              {status !== 'none'
+                ? formatDate(form.expiryDate || null)
+                : 'Set an expiry date below'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Form sections ── */}
+      <div className="pp-body">
+
+        <div className="pp-section">
+          <div className="pp-section-label"><Hash size={12} /> Identity</div>
+          <div className="pp-card">
+            <div className="pp-field">
+              <label>Barcode</label>
+              <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder="Scan or enter manually" />
+            </div>
+            <div className="pp-divider" />
+            <div className="pp-field">
+              <label>Product Name <span className="pp-required">*</span></label>
+              <input value={form.name} onChange={e => handleField('name', e.target.value)} placeholder="e.g. Whole Milk 1L" />
+            </div>
+          </div>
+        </div>
+
+        <div className="pp-section">
+          <div className="pp-section-label"><Layers size={12} /> Stock</div>
+          <div className="pp-card">
+            <div className="pp-field-row">
+              <div className="pp-field pp-field-grow">
+                <label>Category</label>
+                <select value={form.category} onChange={e => handleField('category', e.target.value)}>
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="pp-field pp-field-sm">
+                <label>Qty</label>
+                <input type="number" min="0" value={form.quantity} onChange={e => handleField('quantity', e.target.value)} />
+              </div>
+              <div className="pp-field pp-field-sm">
+                <label>Unit</label>
+                <select value={form.unit} onChange={e => handleField('unit', e.target.value)}>
+                  {UNITS.map(u => <option key={u}>{u}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="pp-divider" />
+            <div className="pp-field pp-field-sm">
+              <label>Min Stock Qty</label>
+              <input type="number" min="0" value={form.minQty} onChange={e => handleField('minQty', e.target.value)} placeholder="e.g. 5" />
+            </div>
+          </div>
+        </div>
+
+        <div className="pp-section">
+          <div className="pp-section-label"><DollarSign size={12} /> Pricing</div>
+          <div className="pp-card">
+            <div className="pp-field-row">
+              <div className="pp-field pp-field-grow">
+                <label>Cost Price (฿)</label>
+                <input type="number" min="0" step="0.01" value={form.costPrice} onChange={e => handleField('costPrice', e.target.value)} placeholder="0.00" />
+              </div>
+              <div className="pp-field pp-field-grow">
+                <label>Sell Price (฿)</label>
+                <input type="number" min="0" step="0.01" value={form.sellPrice} onChange={e => handleField('sellPrice', e.target.value)} placeholder="0.00" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pp-section">
+          <div className="pp-section-label"><Calendar size={12} /> Expiry</div>
+          <div className="pp-card">
+            <div className="pp-field">
+              <label>Expiry Date</label>
+              <input type="date" value={form.expiryDate} onChange={e => handleField('expiryDate', e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="pp-section">
+          <div className="pp-section-label"><Package size={12} /> Notes</div>
+          <div className="pp-card">
+            <div className="pp-field">
+              <textarea
+                value={form.notes}
+                onChange={e => handleField('notes', e.target.value)}
+                rows={3}
+                placeholder="Storage instructions, supplier info…"
+              />
+            </div>
+          </div>
+        </div>
+
+        <button
+          className="btn-primary full-width pp-save-btn"
+          onClick={handleSave}
+          disabled={!dirty || !form.name.trim() || saving}
+        >
+          {saving ? <><Loader2 size={16} className="spin" /> Saving…</> : <><Save size={18} /> Save Changes</>}
+        </button>
+      </div>
+    </div>
+  );
+}
