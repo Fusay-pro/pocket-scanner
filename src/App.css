@@ -1451,3 +1451,57 @@ body {
   padding: 1px 6px;
   border-radius: 4px;
 }
+
+/* ── Bulk Delete ─────────────────────────────── */
+.bulk-select-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  margin-bottom: 4px;
+}
+.bulk-checkbox {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--primary);
+  margin-right: 4px;
+}
+.card-selected {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg)) !important;
+}
+.bulk-delete-bar {
+  position: sticky;
+  bottom: 72px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  z-index: 10;
+}
+.btn-danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-sm { font-size: 13px; padding: 6px 12px; }
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+}
+.btn-ghost:hover { background: var(--surface-2); }

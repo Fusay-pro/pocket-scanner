@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ScanLine, Package, AlertTriangle, CheckCircle, Clock,
-  Search, Filter, Trash2, ChevronRight, Loader2, Users, UserPlus,
+  Search, Trash2, ChevronRight, Loader2, Users, UserPlus,
   UserX, ShieldCheck, Shield, X, TrendingDown
 } from 'lucide-react';
 import {
@@ -38,6 +38,10 @@ export default function StorePage() {
   const [editingName, setEditingName] = useState(false);
   const [storeName, setStoreName] = useState('');
   const [error, setError] = useState('');
+
+  const [editMode, setEditMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   // Members panel
   const [showMembers, setShowMembers] = useState(false);
@@ -327,6 +331,19 @@ export default function StorePage() {
           )}
 
           <div className="toolbar">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                {filtered.length} of {products.length} {tr('productsCount')}
+              </span>
+              {isOwner && (
+                <button
+                  className="btn-secondary btn-sm"
+                  onClick={() => { setEditMode(e => !e); setSelected(new Set()); }}
+                >
+                  {editMode ? tr('doneBtn') : 'Edit'}
+                </button>
+              )}
+            </div>
             <div className="search-box">
               <Search size={16} />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('searchProductsPlaceholder')} />
@@ -353,14 +370,54 @@ export default function StorePage() {
               )}
             </div>
           ) : (
+            <>
+            {editMode && filtered.length > 0 && (
+              <div className="bulk-select-bar">
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={() => {
+                    if (selected.size === filtered.length) {
+                      setSelected(new Set());
+                    } else {
+                      setSelected(new Set(filtered.map(p => p.id)));
+                    }
+                  }}
+                >
+                  {selected.size === filtered.length ? 'Deselect All' : 'Select All'}
+                </button>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  {selected.size} selected
+                </span>
+              </div>
+            )}
             <div className="card-list">
               {filtered.map(product => {
                 const status = getExpiryStatus(product.expiryDate);
                 return (
                   <div key={product.id}
-                    className={`card card-product expiry-${status}`}
-                    onClick={() => navigate(`/store/${storeId}/product/${product.id}`)}>
+                    className={`card card-product expiry-${status}${editMode && selected.has(product.id) ? ' card-selected' : ''}`}
+                    onClick={() => {
+                      if (editMode) {
+                        setSelected(prev => {
+                          const next = new Set(prev);
+                          if (next.has(product.id)) next.delete(product.id);
+                          else next.add(product.id);
+                          return next;
+                        });
+                      } else {
+                        navigate(`/store/${storeId}/product/${product.id}`);
+                      }
+                    }}>
                     <div className="card-body">
+                      {editMode && (
+                        <input
+                          type="checkbox"
+                          className="bulk-checkbox"
+                          checked={selected.has(product.id)}
+                          onChange={() => {}}
+                          onClick={e => e.stopPropagation()}
+                        />
+                      )}
                       <div className={`expiry-badge badge-${status}`}>
                         {status === 'expired' ? <AlertTriangle size={14} /> :
                           status === 'soon' ? <Clock size={14} /> :
@@ -383,7 +440,7 @@ export default function StorePage() {
                       </div>
                       <div className="card-actions">
                         {/* Only owners see the delete button */}
-                        {isOwner && (
+                        {isOwner && !editMode && (
                           <button className="btn-danger-ghost" onClick={e => handleDeleteProduct(product.id, e)}>
                             <Trash2 size={16} />
                           </button>
@@ -395,12 +452,34 @@ export default function StorePage() {
                 );
               })}
             </div>
+            </>
           )}
 
-          <div className="stats-bar">
-            <Filter size={14} /> {filtered.length} of {products.length} {tr('productsCount')}
-          </div>
         </>
+      )}
+
+      {editMode && selected.size > 0 && (
+        <div className="bulk-delete-bar">
+          <button
+            className="btn-danger full-width"
+            disabled={deleting}
+            onClick={async () => {
+              if (!confirm(`Delete ${selected.size} product${selected.size !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+              setDeleting(true);
+              try {
+                await Promise.all(Array.from(selected).map(id => deleteProduct(id)));
+                setProducts(prev => prev.filter(p => !selected.has(p.id)));
+                setSelected(new Set());
+                setEditMode(false);
+              } catch (e) { setError(errMsg(e)); }
+              finally { setDeleting(false); }
+            }}
+          >
+            {deleting
+              ? <><Loader2 size={16} className="spin" /> Deleting…</>
+              : <><Trash2 size={16} /> Delete ({selected.size})</>}
+          </button>
+        </div>
       )}
 
       <StoreTabBar storeId={storeId!} />
