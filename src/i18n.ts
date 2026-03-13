@@ -35,6 +35,7 @@ const translations = {
     savingLabel:               'Saving…',
     loading:                   'Loading…',
     doneBtn:                   'Done',
+    editBtn:                   'Edit',
     stopBtn:                   'Stop',
     // StoreList
     addStore:                  'Add Store',
@@ -184,6 +185,7 @@ const translations = {
     savingLabel:               'กำลังบันทึก…',
     loading:                   'กำลังโหลด…',
     doneBtn:                   'เสร็จสิ้น',
+    editBtn:                   'แก้ไข',
     stopBtn:                   'หยุด',
     // StoreList
     addStore:                  'เพิ่มร้าน',

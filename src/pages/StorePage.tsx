@@ -340,7 +340,7 @@ export default function StorePage() {
                   className="btn-secondary btn-sm"
                   onClick={() => { setEditMode(e => !e); setSelected(new Set()); }}
                 >
-                  {editMode ? tr('doneBtn') : 'Edit'}
+                  {editMode ? tr('doneBtn') : tr('editBtn')}
                 </button>
               )}
             </div>
@@ -414,8 +414,15 @@ export default function StorePage() {
                           type="checkbox"
                           className="bulk-checkbox"
                           checked={selected.has(product.id)}
-                          onChange={() => {}}
-                          onClick={e => e.stopPropagation()}
+                          onChange={e => {
+                            e.stopPropagation();
+                            setSelected(prev => {
+                              const next = new Set(prev);
+                              if (next.has(product.id)) next.delete(product.id);
+                              else next.add(product.id);
+                              return next;
+                            });
+                          }}
                         />
                       )}
                       <div className={`expiry-badge badge-${status}`}>
