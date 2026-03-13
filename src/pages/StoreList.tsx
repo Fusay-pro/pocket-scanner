@@ -147,6 +147,10 @@ export default function StoreList() {
                   </div>
                 </div>
                 <div className="card-actions">
+                  <button className="btn-icon" title="Analytics"
+                    onClick={e => { e.stopPropagation(); navigate(`/store/${store.id}/analytics`); }}>
+                    <BarChart2 size={16} />
+                  </button>
                   {ownerOf[store.id] && (
                     <button className="btn-danger-ghost" onClick={e => handleDelete(store.id, e)}>
                       <Trash2 size={16} />
