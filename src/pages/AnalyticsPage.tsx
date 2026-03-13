@@ -128,8 +128,8 @@ export default function AnalyticsPage() {
   async function handleExportSales() {
     setExporting(true);
     try {
-      const [stores, sales] = await Promise.all([getStores(), getAllSales()]);
-      exportSalesCsv(stores, sales);
+      const [stores, allSales] = await Promise.all([getStores(), getAllSales()]);
+      exportSalesCsv(stores, allSales);
     } catch (e) { setError(errMsg(e)); }
     finally { setExporting(false); }
   }
@@ -307,17 +307,19 @@ export default function AnalyticsPage() {
 
       </> /* end isOwner guard */}
 
-      <div className="export-section">
-        <h3 className="export-title">Export Data</h3>
-        <div className="export-buttons">
-          <button className="btn-secondary" onClick={handleExportInventory} disabled={exporting}>
-            <Download size={16} /> Export Inventory
-          </button>
-          <button className="btn-secondary" onClick={handleExportSales} disabled={exporting}>
-            <Download size={16} /> Export Sales
-          </button>
+      {isOwner && (
+        <div className="export-section">
+          <h3 className="export-title">Export Data</h3>
+          <div className="export-buttons">
+            <button className="btn-secondary" onClick={handleExportInventory} disabled={exporting}>
+              <Download size={16} /> Export Inventory
+            </button>
+            <button className="btn-secondary" onClick={handleExportSales} disabled={exporting}>
+              <Download size={16} /> Export Sales
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <StoreTabBar storeId={storeId!} />
     </div>
