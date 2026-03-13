@@ -1404,3 +1404,50 @@ body {
   background: rgba(0,200,122,0.55);
   transform: translateX(-50%);
 }
+
+/* ── Batch Picker Modal ─────────────────────── */
+.batch-picker-modal {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.batch-picker-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+.batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.batch-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s;
+}
+.batch-item:hover { background: var(--surface-2); }
+.batch-item-expired { border-color: var(--danger); }
+.batch-item-soon    { border-color: var(--warn); }
+.batch-status-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.status-expired { background: var(--danger-light); color: var(--danger); }
+.status-soon    { background: var(--warn-light);   color: var(--warn); }
+.status-ok      { background: var(--success-light); color: var(--success); }
+.status-none    { background: var(--surface-2); color: var(--text-muted); }
+.batch-expiry { font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.batch-qty { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.batch-recommended {
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--success-light);
+  color: var(--success);
+  padding: 1px 6px;
+  border-radius: 4px;
+}

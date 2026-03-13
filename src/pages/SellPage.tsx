@@ -10,7 +10,9 @@ import { getStores, getProductsByStore, updateProduct, recordSale } from '../uti
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../i18n';
 import StoreTabBar from '../components/StoreTabBar';
+import BatchPickerModal from '../components/BatchPickerModal';
 import type { Store, Product } from '../types';
+import { formatDate } from '../types';
 
 interface CartItem {
   product: Product;
@@ -31,6 +33,7 @@ export default function SellPage() {
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  const [batchPickerBatches, setBatchPickerBatches] = useState<Product[]>([]);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerStarted = useRef(false);
@@ -65,7 +68,7 @@ export default function SellPage() {
             return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
           });
           const found = matches[0];
-          if (found) addToCart(found);
+          if (found) handleProductSelect(found);
           else {
             const outOfStock = products.some(p => p.barcode === code);
             setError(outOfStock ? `All batches of this product are out of stock.` : `No product found for barcode: ${code}`);
@@ -101,6 +104,15 @@ export default function SellPage() {
       return [...prev, { product, qty: 1 }];
     });
     setSearch('');
+  }
+
+  function handleProductSelect(product: Product) {
+    const batches = products.filter(p => p.barcode === product.barcode && p.quantity > 0);
+    if (batches.length > 1) {
+      setBatchPickerBatches(batches);
+    } else {
+      addToCart(product);
+    }
   }
 
   function updateQty(productId: string, delta: number) {
@@ -212,7 +224,7 @@ export default function SellPage() {
         {searchResults.length > 0 && (
           <div className="search-dropdown">
             {searchResults.map(p => (
-              <button key={p.id} className="search-result-item" onClick={() => addToCart(p)}>
+              <button key={p.id} className="search-result-item" onClick={() => { handleProductSelect(p); stopScanner(); }}>
                 <div className="search-result-name">{p.name}</div>
                 <div className="search-result-meta">
                   <span>{p.category}</span>
@@ -242,7 +254,10 @@ export default function SellPage() {
                 <div key={item.product.id} className="cart-item">
                   <div className="cart-item-info">
                     <p className="cart-item-name">{item.product.name}</p>
-                    <p className="cart-item-meta">{item.product.category} · {tr('stockLabel')} {item.product.quantity}</p>
+                    <p className="cart-item-meta">
+                      {item.product.category} · {tr('stockLabel')} {item.product.quantity}
+                      {item.product.expiryDate && <span> · Exp: {formatDate(item.product.expiryDate)}</span>}
+                    </p>
                   </div>
                   <div className="cart-qty-controls">
                     <button className="qty-btn" onClick={() => updateQty(item.product.id, -1)} disabled={item.qty <= 1}>
@@ -274,6 +289,14 @@ export default function SellPage() {
           </>
         )}
       </div>
+
+      {batchPickerBatches.length > 0 && (
+        <BatchPickerModal
+          batches={batchPickerBatches}
+          onSelect={p => { addToCart(p); setBatchPickerBatches([]); }}
+          onClose={() => setBatchPickerBatches([])}
+        />
+      )}
 
       <StoreTabBar storeId={storeId!} />
     </div>
