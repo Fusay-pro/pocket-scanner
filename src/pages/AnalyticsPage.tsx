@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, BarChart2, TrendingUp, Package, ShoppingCart,
-  Loader2, Trophy, Tag
+  Loader2, Trophy, Tag, Download
 } from 'lucide-react';
-import { getStores, getSalesByStore, getStoreRole } from '../utils/storage';
+import { getStores, getSalesByStore, getStoreRole, getAllSales, getAllProducts } from '../utils/storage';
+import { exportInventoryCsv, exportSalesCsv } from '../utils/csvExport';
 import type { Sale, MemberRole } from '../utils/storage';
 import type { Store } from '../types';
 import StoreTabBar from '../components/StoreTabBar';
@@ -81,6 +82,7 @@ export default function AnalyticsPage() {
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [range, setRange] = useState<'7d' | '30d' | 'all'>(defaultRange);
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [role, setRole] = useState<MemberRole | null>(null);
   const [roleLoaded, setRoleLoaded] = useState(!isSupabaseConfigured);
 
@@ -113,6 +115,24 @@ export default function AnalyticsPage() {
   const dayRevMax = Math.max(...days.map(d => d.revenue), 1);
   const catMax = Math.max(...categories.map(c => c.totalSold), 1);
   const prodMax = Math.max(...topProducts.map(p => p.totalSold), 1);
+
+  async function handleExportInventory() {
+    setExporting(true);
+    try {
+      const [stores, products] = await Promise.all([getStores(), getAllProducts()]);
+      exportInventoryCsv(stores, products);
+    } catch (e) { setError(errMsg(e)); }
+    finally { setExporting(false); }
+  }
+
+  async function handleExportSales() {
+    setExporting(true);
+    try {
+      const [stores, sales] = await Promise.all([getStores(), getAllSales()]);
+      exportSalesCsv(stores, sales);
+    } catch (e) { setError(errMsg(e)); }
+    finally { setExporting(false); }
+  }
 
   return (
     <div className="page analytics-page">
@@ -286,6 +306,18 @@ export default function AnalyticsPage() {
       )}
 
       </> /* end isOwner guard */}
+
+      <div className="export-section">
+        <h3 className="export-title">Export Data</h3>
+        <div className="export-buttons">
+          <button className="btn-secondary" onClick={handleExportInventory} disabled={exporting}>
+            <Download size={16} /> Export Inventory
+          </button>
+          <button className="btn-secondary" onClick={handleExportSales} disabled={exporting}>
+            <Download size={16} /> Export Sales
+          </button>
+        </div>
+      </div>
 
       <StoreTabBar storeId={storeId!} />
     </div>

@@ -1505,3 +1505,26 @@ body {
   font-weight: 500;
 }
 .btn-ghost:hover { background: var(--surface-2); }
+
+/* ── Export ──────────────────────────────────── */
+.export-section {
+  padding: 16px;
+  margin-bottom: 80px;
+}
+.export-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.export-buttons {
+  display: flex;
+  gap: 8px;
+}
+.export-buttons .btn-secondary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

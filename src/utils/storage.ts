@@ -400,6 +400,22 @@ export async function getSalesByStore(storeId: string): Promise<Sale[]> {
   return (data ?? []).map(rowToSale);
 }
 
+export async function getAllSales(): Promise<Sale[]> {
+  if (!isSupabaseConfigured) return lsGet<Sale>(LS_SALES);
+  const { data, error } = await supabase
+    .from('sales').select('*').order('sold_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(rowToSale);
+}
+
+export async function getAllProducts(): Promise<Product[]> {
+  if (!isSupabaseConfigured) return lsGet<Product>(LS_PRODUCTS);
+  const { data, error } = await supabase
+    .from('products').select('*').order('added_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(rowToProduct);
+}
+
 export async function deleteSale(id: string): Promise<void> {
   if (!isSupabaseConfigured) {
     lsSet(LS_SALES, lsGet<Sale>(LS_SALES).filter(s => s.id !== id));
