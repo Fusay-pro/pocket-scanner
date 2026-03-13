@@ -10,6 +10,7 @@ import ProductPage from './pages/ProductPage';
 import SellPage from './pages/SellPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
+import OverviewPage from './pages/OverviewPage';
 import { Loader2 } from 'lucide-react';
 import './App.css';
 
@@ -34,6 +35,7 @@ function ProtectedRoutes() {
         <Route path="/store/:storeId/analytics" element={<AnalyticsPage />} />
         <Route path="/store/:storeId/settings" element={<SettingsPage />} />
         <Route path="/store/:storeId/product/:productId" element={<ProductPage />} />
+        <Route path="/overview" element={<OverviewPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

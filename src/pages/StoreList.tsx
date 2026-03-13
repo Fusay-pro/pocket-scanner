@@ -1,7 +1,7 @@
 import { errMsg } from '../utils/errMsg';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Warehouse, Plus, Trash2, ChevronRight, MapPin, Package, Loader2, LogOut } from 'lucide-react';
+import { Store, Warehouse, Plus, Trash2, ChevronRight, MapPin, Package, Loader2, LogOut, BarChart2 } from 'lucide-react';
 import { getStores, saveStore, deleteStore, getProductsByStore, getStoreRole } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -81,6 +81,9 @@ export default function StoreList() {
           <h1>Pocket Scanner</h1>
         </div>
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button className="btn-icon" onClick={() => navigate('/overview')} title="Overview">
+            <BarChart2 size={20} />
+          </button>
           <button className="btn-icon" onClick={() => setShowForm(true)} title={tr('addStore')}>
             <Plus size={20} />
           </button>
