@@ -22,7 +22,7 @@ interface CartItem {
 export default function SellPage() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
-  const { lang } = useSettings();
+  const { lang, currencySymbol } = useSettings();
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
 
   const [store, setStore] = useState<Store | null>(null);
@@ -278,7 +278,7 @@ export default function SellPage() {
             <div className="cart-summary">
               <span>
                 {cart.length} product{cart.length !== 1 ? 's' : ''} · {cartTotal} unit{cartTotal !== 1 ? 's' : ''}
-                {cartRevenue > 0 && <> · <strong>฿{cartRevenue.toFixed(2)}</strong></>}
+                {cartRevenue > 0 && <> · <strong>{currencySymbol}{cartRevenue.toFixed(2)}</strong></>}
               </span>
               <button className="btn-primary sell-confirm-btn" onClick={handleSell} disabled={processing}>
                 {processing

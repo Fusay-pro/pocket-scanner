@@ -26,7 +26,7 @@ function filterByRange(sales: Sale[], range: '7d' | '30d' | 'all'): Sale[] {
 
 export default function OverviewPage() {
   const navigate = useNavigate();
-  const { lang, analyticsRange: defaultRange } = useSettings();
+  const { lang, analyticsRange: defaultRange, currencySymbol } = useSettings();
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [storeStats, setStoreStats] = useState<StoreStat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +112,7 @@ export default function OverviewPage() {
             <div className="kpi-card">
               <div className="kpi-icon kpi-green"><TrendingUp size={18} /></div>
               <div>
-                <p className="kpi-value">฿{totalRevenue.toFixed(0)}</p>
+                <p className="kpi-value">{currencySymbol}{totalRevenue.toFixed(0)}</p>
                 <p className="kpi-label">{tr('revenueLabel')}</p>
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function OverviewPage() {
                     </div>
                   </div>
                   <div className="top-count">
-                    <div style={{ fontWeight: 700, fontSize: '14px' }}>฿{stat.revenue.toFixed(0)}</div>
+                    <div style={{ fontWeight: 700, fontSize: '14px' }}>{currencySymbol}{stat.revenue.toFixed(0)}</div>
                   </div>
                 </div>
               ))}

@@ -26,7 +26,7 @@ export default function StorePage() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { lang, lowStockThreshold } = useSettings();
+  const { lang, lowStockThreshold, expiryWarningDays } = useSettings();
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
 
   const [store, setStore] = useState<Store | null>(null);
@@ -155,14 +155,14 @@ export default function StorePage() {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.barcode.includes(search) ||
       p.category.toLowerCase().includes(search.toLowerCase());
-    const status = getExpiryStatus(p.expiryDate);
+    const status = getExpiryStatus(p.expiryDate, expiryWarningDays);
     if (filter === 'low') return matchSearch && isLowStock(p);
     const matchFilter = filter === 'all' || status === filter;
     return matchSearch && matchFilter;
   });
 
-  const expiredCount = products.filter(p => getExpiryStatus(p.expiryDate) === 'expired').length;
-  const soonCount = products.filter(p => getExpiryStatus(p.expiryDate) === 'soon').length;
+  const expiredCount = products.filter(p => getExpiryStatus(p.expiryDate, expiryWarningDays) === 'expired').length;
+  const soonCount = products.filter(p => getExpiryStatus(p.expiryDate, expiryWarningDays) === 'soon').length;
   const lowStockCount = products.filter(isLowStock).length;
 
   return (
@@ -392,7 +392,7 @@ export default function StorePage() {
             )}
             <div className="card-list">
               {filtered.map(product => {
-                const status = getExpiryStatus(product.expiryDate);
+                const status = getExpiryStatus(product.expiryDate, expiryWarningDays);
                 return (
                   <div key={product.id}
                     className={`card card-product expiry-${status}${editMode && selected.has(product.id) ? ' card-selected' : ''}`}

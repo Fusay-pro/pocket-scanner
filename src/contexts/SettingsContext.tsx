@@ -9,6 +9,9 @@ interface Settings {
   theme: Theme;
   analyticsRange: AnalyticsRange;
   lowStockThreshold: number;
+  currencySymbol: string;
+  expiryWarningDays: number;
+  defaultUnit: string;
 }
 
 interface SettingsCtx extends Settings {
@@ -16,12 +19,15 @@ interface SettingsCtx extends Settings {
   setTheme: (t: Theme) => void;
   setAnalyticsRange: (r: AnalyticsRange) => void;
   setLowStockThreshold: (n: number) => void;
+  setCurrencySymbol: (s: string) => void;
+  setExpiryWarningDays: (n: number) => void;
+  setDefaultUnit: (s: string) => void;
 }
 
 const Ctx = createContext<SettingsCtx>({} as SettingsCtx);
 
 const LS_KEY = 'pocket_scanner_settings';
-const DEFAULTS: Settings = { lang: 'en', theme: 'light', analyticsRange: '7d', lowStockThreshold: 5 };
+const DEFAULTS: Settings = { lang: 'en', theme: 'light', analyticsRange: '7d', lowStockThreshold: 5, currencySymbol: '฿', expiryWarningDays: 7, defaultUnit: 'pcs' };
 
 function load(): Settings {
   try {
@@ -53,6 +59,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setTheme:              t => update({ theme: t }),
       setAnalyticsRange:     r => update({ analyticsRange: r }),
       setLowStockThreshold:  n => update({ lowStockThreshold: n }),
+      setCurrencySymbol:     s => update({ currencySymbol: s }),
+      setExpiryWarningDays:  n => update({ expiryWarningDays: n }),
+      setDefaultUnit:        s => update({ defaultUnit: s }),
     }}>
       {children}
     </Ctx.Provider>

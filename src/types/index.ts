@@ -24,13 +24,13 @@ export interface Product {
 
 export type ExpiryStatus = 'expired' | 'soon' | 'ok' | 'none';
 
-export function getExpiryStatus(expiryDate: string | null): ExpiryStatus {
+export function getExpiryStatus(expiryDate: string | null, warningDays = 7): ExpiryStatus {
   if (!expiryDate) return 'none';
   const now = new Date();
   const expiry = new Date(expiryDate);
   const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays < 0) return 'expired';
-  if (diffDays <= 7) return 'soon';
+  if (diffDays <= warningDays) return 'soon';
   return 'ok';
 }
 

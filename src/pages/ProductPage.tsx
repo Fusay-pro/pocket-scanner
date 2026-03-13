@@ -25,14 +25,14 @@ const STATUS_CONFIG_KEYS = {
 export default function ProductPage() {
   const { storeId, productId } = useParams<{ storeId: string; productId: string }>();
   const navigate = useNavigate();
-  const { lang } = useSettings();
+  const { lang, defaultUnit, expiryWarningDays } = useSettings();
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [product, setProduct] = useState<Product | null>(null);
   const [role, setRole] = useState<MemberRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     barcode: '', name: '', category: 'Food', quantity: '1',
-    unit: 'pcs', expiryDate: '', notes: '',
+    unit: defaultUnit, expiryDate: '', notes: '',
     costPrice: '', sellPrice: '', minQty: '', supplier: '',
   });
   const [dirty, setDirty] = useState(false);
@@ -66,13 +66,29 @@ export default function ProductPage() {
     }).catch(e => { setError(errMsg(e)); setLoading(false); });
   }, [productId, storeId]);
 
+  function sanitizeNum(field: string, value: string): string {
+    if (['quantity', 'minQty'].includes(field)) return value.replace(/[^0-9]/g, '');
+    if (['costPrice', 'sellPrice'].includes(field)) {
+      const clean = value.replace(/[^0-9.]/g, '');
+      const parts = clean.split('.');
+      return parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : clean;
+    }
+    return value;
+  }
+
   function handleField(field: string, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm(prev => ({ ...prev, [field]: sanitizeNum(field, value) }));
     setDirty(true);
   }
 
+  function hasInvalidNum(v: string) { return v !== '' && (isNaN(Number(v)) || Number(v) < 0); }
+
   async function handleSave() {
     if (!productId || !form.name.trim()) return;
+    if (
+      hasInvalidNum(form.quantity) || hasInvalidNum(form.costPrice) ||
+      hasInvalidNum(form.sellPrice) || hasInvalidNum(form.minQty)
+    ) { setError(tr('validationNumberInvalid')); return; }
     setSaving(true);
     try {
       await updateProduct(productId, {
@@ -106,7 +122,7 @@ export default function ProductPage() {
     <div className="page"><div className="empty-state">{tr('productNotFound')}</div></div>
   );
 
-  const status = getExpiryStatus(form.expiryDate || null);
+  const status = getExpiryStatus(form.expiryDate || null, expiryWarningDays);
   const cfg = STATUS_CONFIG_KEYS[status];
   const StatusIcon = cfg.icon;
 
@@ -193,7 +209,7 @@ export default function ProductPage() {
               </div>
               <div className="pp-field pp-field-sm">
                 <label>{tr('qtyLabel')}</label>
-                <input type="number" min="0" value={form.quantity} onChange={e => handleField('quantity', e.target.value)} />
+                <input type="text" inputMode="numeric" value={form.quantity} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ''); e.target.value = v; handleField('quantity', v); }} />
               </div>
               <div className="pp-field pp-field-sm">
                 <label>{tr('unitLabel')}</label>
@@ -205,7 +221,7 @@ export default function ProductPage() {
             <div className="pp-divider" />
             <div className="pp-field pp-field-sm">
               <label>{tr('minStockQtyLabel')}</label>
-              <input type="number" min="0" value={form.minQty} onChange={e => handleField('minQty', e.target.value)} placeholder="e.g. 5" />
+              <input type="text" inputMode="numeric" value={form.minQty} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ''); e.target.value = v; handleField('minQty', v); }} placeholder="e.g. 5" />
             </div>
           </div>
         </div>
@@ -216,11 +232,11 @@ export default function ProductPage() {
             <div className="pp-field-row">
               <div className="pp-field pp-field-grow">
                 <label>{tr('costPriceLabel')}</label>
-                <input type="number" min="0" step="0.01" value={form.costPrice} onChange={e => handleField('costPrice', e.target.value)} placeholder="0.00" />
+                <input type="text" inputMode="decimal" value={form.costPrice} onChange={e => { const v = e.target.value.replace(/[^0-9.]/g, ''); e.target.value = v; handleField('costPrice', v); }} placeholder="0.00" />
               </div>
               <div className="pp-field pp-field-grow">
                 <label>{tr('sellPriceLabel')}</label>
-                <input type="number" min="0" step="0.01" value={form.sellPrice} onChange={e => handleField('sellPrice', e.target.value)} placeholder="0.00" />
+                <input type="text" inputMode="decimal" value={form.sellPrice} onChange={e => { const v = e.target.value.replace(/[^0-9.]/g, ''); e.target.value = v; handleField('sellPrice', v); }} placeholder="0.00" />
               </div>
             </div>
           </div>

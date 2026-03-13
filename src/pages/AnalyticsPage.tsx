@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
   const [store, setStore] = useState<Store | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const { lang, analyticsRange: defaultRange } = useSettings();
+  const { lang, analyticsRange: defaultRange, currencySymbol } = useSettings();
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [range, setRange] = useState<'7d' | '30d' | 'all'>(defaultRange);
   const [error, setError] = useState('');
@@ -208,7 +208,7 @@ export default function AnalyticsPage() {
               <div className="kpi-card">
                 <div className="kpi-icon kpi-green"><TrendingUp size={18} /></div>
                 <div>
-                  <p className="kpi-value">฿{totalRevenue.toFixed(0)}</p>
+                  <p className="kpi-value">{currencySymbol}{totalRevenue.toFixed(0)}</p>
                   <p className="kpi-label">{tr('revenueLabel')}</p>
                 </div>
               </div>
@@ -233,7 +233,7 @@ export default function AnalyticsPage() {
                       <div
                         className="bar-fill bar-fill-revenue"
                         style={{ height: `${(day.revenue / dayRevMax) * 100}%` }}
-                        title={`฿${day.revenue.toFixed(0)}`}
+                        title={`${currencySymbol}${day.revenue.toFixed(0)}`}
                       />
                     )}
                   </div>
@@ -265,7 +265,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="top-count">
                     {p.totalSold}
-                    {p.revenue != null && <div style={{ fontSize: '10px', color: 'var(--success)', fontWeight: 700 }}>฿{p.revenue.toFixed(0)}</div>}
+                    {p.revenue != null && <div style={{ fontSize: '10px', color: 'var(--success)', fontWeight: 700 }}>{currencySymbol}{p.revenue.toFixed(0)}</div>}
                   </div>
                 </div>
               ))}

@@ -23,7 +23,7 @@ type Mode = 'add' | 'receive';
 export default function ScanPage() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
-  const { lang } = useSettings();
+  const { lang, defaultUnit } = useSettings();
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [store, setStore] = useState<Store | null>(null);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
@@ -37,7 +37,7 @@ export default function ScanPage() {
   const scannerStarted = useRef(false);
 
   const [mode, setMode] = useState<Mode>('add');
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => ({ ...EMPTY_FORM, unit: defaultUnit }));
   const [autoFilled, setAutoFilled] = useState(false);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -138,10 +138,20 @@ export default function ScanPage() {
     setScanning(false);
   }
 
+  function sanitizeNum(field: string, value: string): string {
+    if (['quantity', 'minQty'].includes(field)) return value.replace(/[^0-9]/g, '');
+    if (['costPrice', 'sellPrice'].includes(field)) {
+      const clean = value.replace(/[^0-9.]/g, '');
+      const parts = clean.split('.');
+      return parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : clean;
+    }
+    return value;
+  }
+
   function handleField(field: string, value: string) {
     if (field === 'barcode') { handleBarcodeChange(value); return; }
     if (field === 'name') setAutoFilled(false);
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm(prev => ({ ...prev, [field]: sanitizeNum(field, value) }));
   }
 
   function selectRecent(product: Product) {
@@ -156,8 +166,14 @@ export default function ScanPage() {
     document.getElementById('scan-form')?.scrollIntoView({ behavior: 'smooth' });
   }
 
+  function hasInvalidNum(v: string) { return v !== '' && (isNaN(Number(v)) || Number(v) < 0); }
+
   async function handleSave() {
     if (!storeId || !form.name.trim()) return;
+    if (
+      hasInvalidNum(form.quantity) || hasInvalidNum(form.costPrice) ||
+      hasInvalidNum(form.sellPrice) || hasInvalidNum(form.minQty)
+    ) { setError(tr('validationNumberInvalid')); return; }
     setSaving(true);
     try {
       const savedProd = await saveProduct({
@@ -180,7 +196,7 @@ export default function ScanPage() {
         setCachedBarcode(form.barcode.trim(), form.name.trim(), form.category).catch(() => {});
       }
       setSaved(true);
-      setForm(EMPTY_FORM);
+      setForm({ ...EMPTY_FORM, unit: defaultUnit });
       setScannedCode('');
       setAutoFilled(false);
       setTimeout(() => setSaved(false), 2000);
@@ -268,7 +284,7 @@ export default function ScanPage() {
               <div className="form-row">
                 <div className="form-group">
                   <label>{tr('qtyToReceive')}</label>
-                  <input type="number" min="1" value={receiveQty} onChange={e => setReceiveQty(e.target.value)} />
+                  <input type="text" inputMode="numeric" value={receiveQty} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ''); e.target.value = v; setReceiveQty(v); }} />
                 </div>
               </div>
               <div className="form-group">
@@ -330,7 +346,7 @@ export default function ScanPage() {
               </div>
               <div className="form-group form-group-sm">
                 <label>{tr('qtyLabel')}</label>
-                <input type="number" min="0" value={form.quantity} onChange={e => handleField('quantity', e.target.value)} />
+                <input type="text" inputMode="numeric" value={form.quantity} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ''); e.target.value = v; handleField('quantity', v); }} />
               </div>
               <div className="form-group form-group-sm">
                 <label>{tr('unitLabel')}</label>
@@ -348,17 +364,17 @@ export default function ScanPage() {
             <div className="form-row">
               <div className="form-group">
                 <label>{tr('costPriceLabel')}</label>
-                <input type="number" min="0" step="0.01" value={form.costPrice} onChange={e => handleField('costPrice', e.target.value)} placeholder="0.00" />
+                <input type="text" inputMode="decimal" value={form.costPrice} onChange={e => { const v = e.target.value.replace(/[^0-9.]/g, ''); e.target.value = v; handleField('costPrice', v); }} placeholder="0.00" />
               </div>
               <div className="form-group">
                 <label>{tr('sellPriceLabel')}</label>
-                <input type="number" min="0" step="0.01" value={form.sellPrice} onChange={e => handleField('sellPrice', e.target.value)} placeholder="0.00" />
+                <input type="text" inputMode="decimal" value={form.sellPrice} onChange={e => { const v = e.target.value.replace(/[^0-9.]/g, ''); e.target.value = v; handleField('sellPrice', v); }} placeholder="0.00" />
               </div>
             </div>
 
             <div className="form-group form-group-sm">
               <label>{tr('minStockQtyLabel')}</label>
-              <input type="number" min="0" value={form.minQty} onChange={e => handleField('minQty', e.target.value)} placeholder="e.g. 5" />
+              <input type="text" inputMode="numeric" value={form.minQty} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ''); e.target.value = v; handleField('minQty', v); }} placeholder="e.g. 5" />
             </div>
 
             <div className="form-group">
