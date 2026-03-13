@@ -85,11 +85,11 @@ export default function OverviewPage() {
       {error && <div className="error-bar" onClick={() => setError('')}>{error}</div>}
 
       {/* Range picker */}
-      <div className="analytics-range">
+      <div className="analytics-range-tabs">
         {(['7d', '30d', 'all'] as const).map(r => (
           <button
             key={r}
-            className={`range-btn ${range === r ? 'active' : ''}`}
+            className={`range-tab ${range === r ? 'active' : ''}`}
             onClick={() => setRange(r)}
           >
             {r === '7d' ? tr('last7days') : r === '30d' ? tr('last30days') : tr('allTime')}
@@ -108,7 +108,7 @@ export default function OverviewPage() {
         <div className="analytics-body">
 
           {/* KPI cards */}
-          <div className="kpi-row">
+          <div className="kpi-grid">
             <div className="kpi-card">
               <div className="kpi-icon kpi-green"><TrendingUp size={18} /></div>
               <div>
@@ -127,7 +127,7 @@ export default function OverviewPage() {
               <div className="kpi-icon kpi-purple"><Store size={18} /></div>
               <div>
                 <p className="kpi-value">{storeCount}</p>
-                <p className="kpi-label">Stores</p>
+                <p className="kpi-label">Total Stores</p>
               </div>
             </div>
           </div>
