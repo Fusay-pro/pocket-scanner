@@ -251,7 +251,7 @@ export default function ProductPage() {
         </div>
 
         <div className="pp-section">
-          <div className="pp-section-label"><Truck size={12} /> Supplier</div>
+          <div className="pp-section-label"><Truck size={12} /> {tr('supplierLabel')}</div>
           <div className="pp-card">
             <div className="pp-field">
               <input

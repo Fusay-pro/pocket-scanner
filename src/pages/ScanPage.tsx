@@ -151,6 +151,7 @@ export default function ScanPage() {
       costPrice: product.costPrice != null ? String(product.costPrice) : '',
       sellPrice: product.sellPrice != null ? String(product.sellPrice) : '',
       minQty: product.minQty != null ? String(product.minQty) : '',
+      supplier: product.supplier ?? '',
     });
     document.getElementById('scan-form')?.scrollIntoView({ behavior: 'smooth' });
   }
@@ -366,7 +367,7 @@ export default function ScanPage() {
             </div>
 
             <div className="form-group">
-              <label>Supplier</label>
+              <label>{tr('supplierLabel')}</label>
               <input value={form.supplier} onChange={e => handleField('supplier', e.target.value)} placeholder="e.g. ABC Distributors" />
             </div>
 

@@ -240,6 +240,7 @@ export async function receiveStock(
     sellPrice: template.sellPrice,
     costPrice: template.costPrice,
     minQty: template.minQty,
+    supplier: template.supplier,
     quantity: qty,
     expiryDate,
     notes: '',

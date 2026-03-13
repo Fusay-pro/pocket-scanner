@@ -110,6 +110,7 @@ const translations = {
     sectionNotes:              'Notes',
     notesPlaceholder:          'Storage instructions, supplier info…',
     saveChanges:               'Save Changes',
+    supplierLabel:             'Supplier',
     unnamedProduct:            'Unnamed product',
     // ScanPage
     scanItemTitle:             'Scan Item',
@@ -258,6 +259,7 @@ const translations = {
     sectionNotes:              'หมายเหตุ',
     notesPlaceholder:          'คำแนะนำการเก็บรักษา ข้อมูลผู้จำหน่าย…',
     saveChanges:               'บันทึกการเปลี่ยนแปลง',
+    supplierLabel:             'ซัพพลายเออร์',
     unnamedProduct:            'สินค้าไม่มีชื่อ',
     // ScanPage
     scanItemTitle:             'สแกนสินค้า',
