@@ -15,7 +15,7 @@ const UNITS = ['pcs', 'box', 'pack', 'kg', 'g', 'L', 'mL', 'bottle', 'can', 'bag
 const EMPTY_FORM = {
   barcode: '', name: '', category: 'Food', quantity: '1',
   unit: 'pcs', expiryDate: '', notes: '',
-  costPrice: '', sellPrice: '', minQty: '',
+  costPrice: '', sellPrice: '', minQty: '', supplier: '',
 };
 
 type Mode = 'add' | 'receive';
@@ -171,6 +171,7 @@ export default function ScanPage() {
         costPrice: form.costPrice !== '' ? Number(form.costPrice) : null,
         sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : null,
         minQty: form.minQty !== '' ? Number(form.minQty) : null,
+        supplier: form.supplier.trim() || null,
       });
       setRecentProducts(prev => [savedProd, ...prev].slice(0, 4));
       // Cache barcode → name so future scans auto-fill instantly
@@ -362,6 +363,11 @@ export default function ScanPage() {
             <div className="form-group">
               <label>{tr('sectionNotes')}</label>
               <textarea value={form.notes} onChange={e => handleField('notes', e.target.value)} placeholder={tr('optionalNotes')} rows={2} />
+            </div>
+
+            <div className="form-group">
+              <label>Supplier</label>
+              <input value={form.supplier} onChange={e => handleField('supplier', e.target.value)} placeholder="e.g. ABC Distributors" />
             </div>
 
             <button className="btn-primary full-width" onClick={handleSave} disabled={!form.name.trim() || saving}>

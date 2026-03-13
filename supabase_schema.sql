@@ -21,7 +21,10 @@ create table if not exists products (
   unit text not null default 'pcs',
   expiry_date date,
   added_at timestamptz not null default now(),
-  notes text not null default ''
+  notes text not null default '',
+  min_qty numeric,
+  cost_price numeric,
+  sell_price numeric
 );
 
 -- ── Profiles (mirrors auth.users so we can look up by email) ─
@@ -66,6 +69,8 @@ create table if not exists sales (
   barcode text not null default '',
   category text not null default '',
   quantity_sold numeric not null default 1,
+  sell_price numeric,
+  revenue numeric,
   sold_at timestamptz not null default now()
 );
 
@@ -225,3 +230,12 @@ drop policy if exists "barcode_cache_update" on barcode_cache;
 create policy "barcode_cache_select" on barcode_cache for select using (true);
 create policy "barcode_cache_insert" on barcode_cache for insert with check (true);
 create policy "barcode_cache_update" on barcode_cache for update using (true);
+
+-- ── Migration: add missing columns to existing databases ──────
+-- Safe to run even if columns already exist (IF NOT EXISTS).
+alter table products add column if not exists min_qty numeric;
+alter table products add column if not exists cost_price numeric;
+alter table products add column if not exists sell_price numeric;
+alter table sales add column if not exists sell_price numeric;
+alter table sales add column if not exists revenue numeric;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier text;

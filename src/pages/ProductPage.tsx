@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Save, Trash2, Package, AlertTriangle, CheckCircle,
-  Clock, Calendar, Loader2, Tag, Hash, Layers, DollarSign
+  Clock, Calendar, Loader2, Tag, Hash, Layers, DollarSign, Truck
 } from 'lucide-react';
 import { getProducts, updateProduct, deleteProduct, getStoreRole, type MemberRole } from '../utils/storage';
 import { getExpiryStatus, formatDate } from '../types';
@@ -33,7 +33,7 @@ export default function ProductPage() {
   const [form, setForm] = useState({
     barcode: '', name: '', category: 'Food', quantity: '1',
     unit: 'pcs', expiryDate: '', notes: '',
-    costPrice: '', sellPrice: '', minQty: '',
+    costPrice: '', sellPrice: '', minQty: '', supplier: '',
   });
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -59,6 +59,7 @@ export default function ProductPage() {
           costPrice: found.costPrice != null ? String(found.costPrice) : '',
           sellPrice: found.sellPrice != null ? String(found.sellPrice) : '',
           minQty: found.minQty != null ? String(found.minQty) : '',
+          supplier: found.supplier ?? '',
         });
       }
       setLoading(false);
@@ -81,6 +82,7 @@ export default function ProductPage() {
         costPrice: form.costPrice !== '' ? Number(form.costPrice) : null,
         sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : null,
         minQty: form.minQty !== '' ? Number(form.minQty) : null,
+        supplier: form.supplier.trim() || null,
       });
       setDirty(false); setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -243,6 +245,19 @@ export default function ProductPage() {
                 onChange={e => handleField('notes', e.target.value)}
                 rows={3}
                 placeholder={tr('notesPlaceholder')}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="pp-section">
+          <div className="pp-section-label"><Truck size={12} /> Supplier</div>
+          <div className="pp-card">
+            <div className="pp-field">
+              <input
+                value={form.supplier}
+                onChange={e => handleField('supplier', e.target.value)}
+                placeholder="e.g. ABC Distributors"
               />
             </div>
           </div>

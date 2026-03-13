@@ -19,6 +19,7 @@ export interface Product {
   minQty: number | null;
   costPrice: number | null;
   sellPrice: number | null;
+  supplier: string | null;
 }
 
 export type ExpiryStatus = 'expired' | 'soon' | 'ok' | 'none';

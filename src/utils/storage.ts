@@ -63,6 +63,7 @@ function rowToProduct(row: any): Product {
     minQty: row.min_qty ?? null,
     costPrice: row.cost_price ?? null,
     sellPrice: row.sell_price ?? null,
+    supplier: row.supplier ?? null,
   };
 }
 
@@ -162,6 +163,7 @@ export async function saveProduct(product: Omit<Product, 'id' | 'addedAt'>): Pro
     min_qty: product.minQty ?? null,
     cost_price: product.costPrice ?? null,
     sell_price: product.sellPrice ?? null,
+    supplier: product.supplier ?? null,
   }).select().single();
   if (error) throw error;
   return rowToProduct(data);
@@ -184,6 +186,7 @@ export async function updateProduct(id: string, updates: Partial<Omit<Product, '
   if (updates.minQty     !== undefined) dbUpdates.min_qty     = updates.minQty;
   if (updates.costPrice  !== undefined) dbUpdates.cost_price  = updates.costPrice;
   if (updates.sellPrice  !== undefined) dbUpdates.sell_price  = updates.sellPrice;
+  if (updates.supplier   !== undefined) dbUpdates.supplier    = updates.supplier;
   const { error } = await supabase.from('products').update(dbUpdates).eq('id', id);
   if (error) throw error;
 }
