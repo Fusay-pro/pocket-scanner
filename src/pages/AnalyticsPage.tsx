@@ -5,10 +5,10 @@ import {
   ArrowLeft, BarChart2, TrendingUp, Package, ShoppingCart,
   Loader2, Trophy, Tag, Download
 } from 'lucide-react';
-import { getStores, getSalesByStore, getStoreRole, getAllSales, getAllProducts } from '../utils/storage';
+import { getStores, getSalesByStore, getStoreRole, getAllSales, getAllProducts, getProductsByStore } from '../utils/storage';
 import { exportInventoryCsv, exportSalesCsv } from '../utils/csvExport';
 import type { Sale, MemberRole } from '../utils/storage';
-import type { Store } from '../types';
+import type { Store, Product } from '../types';
 import StoreTabBar from '../components/StoreTabBar';
 import { useSettings } from '../contexts/SettingsContext';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -78,9 +78,10 @@ export default function AnalyticsPage() {
   const [store, setStore] = useState<Store | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const { lang, analyticsRange: defaultRange, currencySymbol } = useSettings();
+  const { lang, analyticsRange: defaultRange, currencySymbol, lowStockThreshold } = useSettings();
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
   const [range, setRange] = useState<'7d' | '30d' | 'all'>(defaultRange);
+  const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
   const [role, setRole] = useState<MemberRole | null>(null);
@@ -91,10 +92,11 @@ export default function AnalyticsPage() {
     if (isSupabaseConfigured) {
       getStoreRole(storeId).then(r => { setRole(r); setRoleLoaded(true); });
     }
-    Promise.all([getStores(), getSalesByStore(storeId)])
-      .then(([stores, s]) => {
+    Promise.all([getStores(), getSalesByStore(storeId), getProductsByStore(storeId)])
+      .then(([stores, s, prods]) => {
         setStore(stores.find(st => st.id === storeId) || null);
         setSales(s);
+        setProducts(prods);
       })
       .catch(e => setError(errMsg(e)))
       .finally(() => setLoading(false));
@@ -115,6 +117,17 @@ export default function AnalyticsPage() {
   const dayRevMax = Math.max(...days.map(d => d.revenue), 1);
   const catMax = Math.max(...categories.map(c => c.totalSold), 1);
   const prodMax = Math.max(...topProducts.map(p => p.totalSold), 1);
+
+  const restockItems = products
+    .filter(p => p.quantity <= (p.minQty ?? lowStockThreshold))
+    .map(p => ({
+      name: p.name,
+      current: p.quantity,
+      min: p.minQty ?? lowStockThreshold,
+      need: Math.max(0, (p.minQty ?? lowStockThreshold) - p.quantity),
+      unit: p.unit,
+    }))
+    .sort((a, b) => b.need - a.need);
 
   async function handleExportInventory() {
     setExporting(true);
@@ -302,6 +315,32 @@ export default function AnalyticsPage() {
             </div>
           )}
 
+        </div>
+      )}
+
+      {restockItems.length > 0 && (
+        <div className="analytics-card">
+          <h3 className="analytics-section-title"><Package size={16} /> Restock List</h3>
+          <table className="restock-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Current</th>
+                <th>Min</th>
+                <th>Need</th>
+              </tr>
+            </thead>
+            <tbody>
+              {restockItems.map(item => (
+                <tr key={item.name}>
+                  <td>{item.name}</td>
+                  <td className="restock-cell-num restock-low">{item.current} {item.unit}</td>
+                  <td className="restock-cell-num">{item.min} {item.unit}</td>
+                  <td className="restock-cell-num restock-need">+{item.need}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
