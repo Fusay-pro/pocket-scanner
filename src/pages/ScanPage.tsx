@@ -311,7 +311,7 @@ export default function ScanPage() {
         <>
           {recentProducts.length > 0 && (
             <div className="quick-select-section">
-              <p className="quick-select-label"><Clock size={13} /> {tr('recentlyAdded')}</p>
+              <p className="quick-select-label"><Clock size={13} /> {tr('barcodeHistory')}</p>
               <div className="quick-select-grid">
                 {recentProducts.map(p => (
                   <button key={p.id} className="quick-select-chip" onClick={() => selectRecent(p)}>
