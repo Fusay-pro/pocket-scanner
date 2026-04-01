@@ -670,6 +670,7 @@ body {
   white-space: nowrap;
 }
 .toast.success { background: var(--primary); color: white; }
+.toast.warning { background: #f59e0b; color: #fff; }
 
 @keyframes slideUp {
   from { transform: translateX(-50%) translateY(20px); opacity: 0; }

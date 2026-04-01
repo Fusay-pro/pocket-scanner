@@ -22,7 +22,7 @@ interface CartItem {
 export default function SellPage() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
-  const { lang, currencySymbol } = useSettings();
+  const { lang, currencySymbol, lowStockThreshold } = useSettings();
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
 
   const [store, setStore] = useState<Store | null>(null);
@@ -33,6 +33,7 @@ export default function SellPage() {
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  const [lowStockNames, setLowStockNames] = useState<string[]>([]);
   const [batchPickerBatches, setBatchPickerBatches] = useState<Product[]>([]);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -155,6 +156,16 @@ export default function SellPage() {
       // Refresh local product list
       const fresh = await getProductsByStore(storeId);
       setProducts(fresh);
+      const nowLow = cart
+        .map(item => fresh.find(p => p.id === item.product.id))
+        .filter((p): p is NonNullable<typeof p> =>
+          p !== undefined && p.quantity <= (p.minQty ?? lowStockThreshold)
+        )
+        .map(p => p.name);
+      if (nowLow.length > 0) {
+        setLowStockNames(nowLow);
+        setTimeout(() => setLowStockNames([]), 4000);
+      }
       setCart([]);
       setDone(true);
       setTimeout(() => setDone(false), 3000);
@@ -191,6 +202,11 @@ export default function SellPage() {
       </header>
 
       {done && <div className="toast success"><CheckCircle size={18} /> {tr('saleRecorded')}</div>}
+      {lowStockNames.length > 0 && (
+        <div className="toast warning">
+          ⚠️ Low stock: {lowStockNames.join(', ')}
+        </div>
+      )}
       {error && <div className="error-bar" onClick={() => setError('')}>{error}</div>}
 
       {/* Scanner */}
