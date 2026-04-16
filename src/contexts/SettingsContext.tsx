@@ -12,6 +12,7 @@ interface Settings {
   currencySymbol: string;
   expiryWarningDays: number;
   defaultUnit: string;
+  aiApiKey: string;
 }
 
 interface SettingsCtx extends Settings {
@@ -22,12 +23,13 @@ interface SettingsCtx extends Settings {
   setCurrencySymbol: (s: string) => void;
   setExpiryWarningDays: (n: number) => void;
   setDefaultUnit: (s: string) => void;
+  setAiApiKey: (k: string) => void;
 }
 
 const Ctx = createContext<SettingsCtx>({} as SettingsCtx);
 
 const LS_KEY = 'pocket_scanner_settings';
-const DEFAULTS: Settings = { lang: 'en', theme: 'light', analyticsRange: '7d', lowStockThreshold: 5, currencySymbol: '฿', expiryWarningDays: 7, defaultUnit: 'pcs' };
+const DEFAULTS: Settings = { lang: 'en', theme: 'light', analyticsRange: '7d', lowStockThreshold: 5, currencySymbol: '฿', expiryWarningDays: 7, defaultUnit: 'pcs', aiApiKey: '' };
 
 function load(): Settings {
   try {
@@ -62,6 +64,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setCurrencySymbol:     s => update({ currencySymbol: s }),
       setExpiryWarningDays:  n => update({ expiryWarningDays: n }),
       setDefaultUnit:        s => update({ defaultUnit: s }),
+      setAiApiKey:           (k: string) => update({ aiApiKey: k }),
     }}>
       {children}
     </Ctx.Provider>

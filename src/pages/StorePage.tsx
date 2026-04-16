@@ -18,6 +18,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { t } from '../i18n';
 import StoreTabBar from '../components/StoreTabBar';
+import AIChatPanel from '../components/AIChatPanel';
 import type { Store, Product } from '../types';
 
 type FilterType = 'all' | 'expired' | 'soon' | 'ok' | 'low';
@@ -489,6 +490,7 @@ export default function StorePage() {
         </div>
       )}
 
+      {store && <AIChatPanel storeId={storeId!} storeName={store.name} />}
       <StoreTabBar storeId={storeId!} />
     </div>
   );
