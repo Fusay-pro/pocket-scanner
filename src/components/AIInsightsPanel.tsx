@@ -140,7 +140,7 @@ export default function AIInsightsPanel({ storeId, storeName, products, sales }:
             </div>
           )}
 
-          {result.summary && (
+          {result.summary && (result.restockItems.length > 0 || result.watchItems.length > 0) && (
             <div className="ai-insights-subsection">
               <div className="ai-insights-subsection-title">
                 <Sparkles size={13} /> Summary
