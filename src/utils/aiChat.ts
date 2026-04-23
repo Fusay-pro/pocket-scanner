@@ -1,4 +1,4 @@
-const AI_BASE = import.meta.env.VITE_AI_BASE_URL as string;
+const AI_BASE = (import.meta.env.VITE_AI_BASE_URL as string)?.replace(/\/+$/, '');
 const AI_MODEL = import.meta.env.VITE_AI_MODEL as string;
 const AI_KEY = import.meta.env.VITE_AI_API_KEY as string;
 
@@ -11,18 +11,19 @@ export async function sendChatMessage(
   messages: ChatMessage[],
   systemPrompt: string,
 ): Promise<string> {
-  const res = await fetch(`${AI_BASE}/v1/messages`, {
+  const res = await fetch(`${AI_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': AI_KEY,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${AI_KEY}`,
     },
     body: JSON.stringify({
       model: AI_MODEL,
       max_tokens: 1024,
-      system: systemPrompt,
-      messages,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
     }),
   });
 
@@ -32,7 +33,7 @@ export async function sendChatMessage(
   }
 
   const data = await res.json();
-  const content = data.content?.[0]?.text;
+  const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error('Empty response from AI');
   return content;
 }
