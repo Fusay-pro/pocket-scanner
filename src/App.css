@@ -79,8 +79,7 @@ body {
 }
 
 #root {
-  max-width: 480px;
-  margin: 0 auto;
+  width: 100%;
   min-height: 100vh;
   background: var(--bg);
 }
@@ -99,6 +98,7 @@ body {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
+  padding-top: calc(14px + env(safe-area-inset-top));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
