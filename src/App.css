@@ -73,7 +73,7 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
-  font-size: 15px;
+  font-size: 13px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -97,8 +97,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  padding-top: calc(14px + env(safe-area-inset-top));
+  padding: 10px 12px;
+  padding-top: calc(10px + env(safe-area-inset-top));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
