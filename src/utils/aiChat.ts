@@ -19,7 +19,7 @@ export async function sendChatMessage(
     },
     body: JSON.stringify({
       model: AI_MODEL,
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages,
