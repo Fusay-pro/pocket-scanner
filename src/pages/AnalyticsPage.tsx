@@ -10,6 +10,7 @@ import { exportInventoryCsv, exportSalesCsv } from '../utils/csvExport';
 import type { Sale, MemberRole } from '../utils/storage';
 import type { Store, Product } from '../types';
 import StoreTabBar from '../components/StoreTabBar';
+import AIInsightsPanel from '../components/AIInsightsPanel';
 import { useSettings } from '../contexts/SettingsContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { t } from '../i18n';
@@ -345,6 +346,15 @@ export default function AnalyticsPage() {
       )}
 
       </> /* end isOwner guard */}
+
+      {isOwner && store && (
+        <AIInsightsPanel
+          storeId={storeId!}
+          storeName={store.name}
+          products={products}
+          sales={sales}
+        />
+      )}
 
       {isOwner && (
         <div className="export-section">
