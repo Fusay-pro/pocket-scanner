@@ -48,6 +48,6 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Pocket Scanner uses the camera to scan barcodes.</string>
+	<string>Pocket Scanner needs camera access to scan barcodes.</string>
 </dict>
 </plist>
