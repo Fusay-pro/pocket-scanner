@@ -1,0 +1,6 @@
+{
+	"appId": "com.pocketscanner.app",
+	"appName": "Pocket Scanner",
+	"webDir": "dist",
+	"packageClassList": []
+}

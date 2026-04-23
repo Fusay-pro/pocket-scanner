@@ -20,6 +20,14 @@ interface TopProduct { name: string; category: string; totalSold: number; transa
 interface CategoryStat { category: string; totalSold: number; }
 interface DayStat { label: string; date: string; totalSold: number; revenue: number; }
 
+function toLocalDateKey(value: string | Date): string {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function computeStats(sales: Sale[]) {
   // Top products
   const prodMap = new Map<string, TopProduct>();
@@ -50,10 +58,10 @@ function computeStats(sales: Sale[]) {
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = toLocalDateKey(d);
     const label = i === 0 ? 'Today' : i === 1 ? 'Yesterday'
       : d.toLocaleDateString('en-US', { weekday: 'short' });
-    const daySales = sales.filter(s => s.soldAt.slice(0, 10) === dateStr);
+    const daySales = sales.filter(s => toLocalDateKey(s.soldAt) === dateStr);
     const totalSold = daySales.reduce((sum, s) => sum + s.quantitySold, 0);
     const revenue = daySales.reduce((sum, s) => sum + (s.revenue ?? 0), 0);
     days.push({ label, date: dateStr, totalSold, revenue });

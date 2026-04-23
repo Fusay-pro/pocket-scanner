@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -23,12 +24,34 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isSupabaseConfigured);
   const [roles, setRoles] = useState<Record<string, Role>>({});
+
+  /** Auto-accept any pending invitations for this user's email */
+  async function acceptPendingInvitations(email: string) {
+    if (!email) return;
+    const { data: invites } = await supabase
+      .from('store_invitations')
+      .select('*')
+      .eq('invited_email', email);
+
+    if (!invites || invites.length === 0) return;
+
+    const uid = (await supabase.auth.getUser()).data.user?.id;
+    if (!uid) return;
+
+    for (const inv of invites) {
+      await supabase.from('store_members').insert({
+        store_id: inv.store_id,
+        user_id: uid,
+        role: inv.role,
+      }).select(); // ignore duplicate errors
+      await supabase.from('store_invitations').delete().eq('id', inv.id);
+    }
+  }
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      setLoading(false);
       return;
     }
 
@@ -54,29 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  /** Auto-accept any pending invitations for this user's email */
-  async function acceptPendingInvitations(email: string) {
-    if (!email) return;
-    const { data: invites } = await supabase
-      .from('store_invitations')
-      .select('*')
-      .eq('invited_email', email);
-
-    if (!invites || invites.length === 0) return;
-
-    const uid = (await supabase.auth.getUser()).data.user?.id;
-    if (!uid) return;
-
-    for (const inv of invites) {
-      await supabase.from('store_members').insert({
-        store_id: inv.store_id,
-        user_id: uid,
-        role: inv.role,
-      }).select(); // ignore duplicate errors
-      await supabase.from('store_invitations').delete().eq('id', inv.id);
-    }
-  }
 
   async function refreshRole(storeId: string) {
     if (!user) return;

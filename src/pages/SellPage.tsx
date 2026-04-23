@@ -87,7 +87,11 @@ export default function SellPage() {
 
   async function stopScanner() {
     if (scannerRef.current && scannerStarted.current) {
-      try { await scannerRef.current.stop(); } catch {}
+      try {
+        await scannerRef.current.stop();
+      } catch {
+        // Scanner may already be stopped during teardown.
+      }
       scannerStarted.current = false;
     }
     setScanning(false);
@@ -95,6 +99,11 @@ export default function SellPage() {
 
   // ── Cart ─────────────────────────────────────────────────────
   function addToCart(product: Product) {
+    if (product.quantity <= 0) {
+      setError(`${product.name} is out of stock.`);
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(i => i.product.id === product.id);
       if (existing) {
@@ -109,10 +118,14 @@ export default function SellPage() {
 
   function handleProductSelect(product: Product) {
     const batches = products.filter(p => p.barcode === product.barcode && p.quantity > 0);
+    if (batches.length === 0) {
+      setError(`All batches of ${product.name} are out of stock.`);
+      return;
+    }
     if (batches.length > 1) {
       setBatchPickerBatches(batches);
     } else {
-      addToCart(product);
+      addToCart(batches[0]);
     }
   }
 
@@ -135,19 +148,30 @@ export default function SellPage() {
     if (!storeId || cart.length === 0) return;
     setProcessing(true);
     try {
+      const freshProducts = await getProductsByStore(storeId);
+      const freshById = new Map(freshProducts.map(product => [product.id, product]));
+
+      for (const item of cart) {
+        const latest = freshById.get(item.product.id);
+        if (!latest || latest.quantity < item.qty) {
+          throw new Error(`Not enough stock for ${item.product.name}. Refresh and try again.`);
+        }
+      }
+
       await Promise.all(cart.map(async item => {
+        const latest = freshById.get(item.product.id)!;
         // Deduct stock
         await updateProduct(item.product.id, {
-          quantity: Math.max(0, item.product.quantity - item.qty),
+          quantity: Math.max(0, latest.quantity - item.qty),
         });
         // Record sale with price snapshot
-        const sp = item.product.sellPrice ?? null;
+        const sp = latest.sellPrice ?? null;
         await recordSale({
           storeId: storeId!,
           productId: item.product.id,
-          productName: item.product.name,
-          barcode: item.product.barcode,
-          category: item.product.category,
+          productName: latest.name,
+          barcode: latest.barcode,
+          category: latest.category,
           quantitySold: item.qty,
           sellPrice: sp,
           revenue: sp != null ? sp * item.qty : null,
@@ -179,8 +203,10 @@ export default function SellPage() {
   // ── Search results ───────────────────────────────────────────
   const searchResults = search.length > 0
     ? products.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.barcode.includes(search)
+        p.quantity > 0 && (
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          p.barcode.includes(search)
+        )
       ).slice(0, 6)
     : [];
 

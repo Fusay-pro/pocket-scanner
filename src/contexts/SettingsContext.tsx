@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Lang } from '../i18n';
 
@@ -35,7 +36,9 @@ function load(): Settings {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
-  } catch {}
+  } catch {
+    // Ignore invalid persisted settings and fall back to defaults.
+  }
   return DEFAULTS;
 }
 

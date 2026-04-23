@@ -55,25 +55,27 @@ export default function StorePage() {
 
   useEffect(() => {
     if (!storeId) return;
+    const activeStoreId = storeId;
+
+    async function load() {
+      try {
+        setLoading(true);
+        const [stores, prods, r] = await Promise.all([
+          getStores(),
+          getProductsByStore(activeStoreId),
+          getStoreRole(activeStoreId),
+        ]);
+        const found = stores.find(s => s.id === activeStoreId) || null;
+        setStore(found);
+        if (found) setStoreName(found.name);
+        setProducts(prods);
+        setRole(r);
+      } catch (e) { setError(errMsg(e)); }
+      finally { setLoading(false); }
+    }
+
     load();
   }, [storeId]);
-
-  async function load() {
-    try {
-      setLoading(true);
-      const [stores, prods, r] = await Promise.all([
-        getStores(),
-        getProductsByStore(storeId!),
-        getStoreRole(storeId!),
-      ]);
-      const found = stores.find(s => s.id === storeId) || null;
-      setStore(found);
-      if (found) setStoreName(found.name);
-      setProducts(prods);
-      setRole(r);
-    } catch (e) { setError(errMsg(e)); }
-    finally { setLoading(false); }
-  }
 
   async function loadMembers() {
     if (!storeId) return;

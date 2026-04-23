@@ -5,14 +5,13 @@ import { getProductsByStore, getSalesByStore } from '../utils/storage';
 import { getExpiryStatus } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Product } from '../types';
-import type { Sale } from '../utils/storage';
 
 interface Props {
   storeId: string;
   storeName: string;
 }
 
-function buildSystemPrompt(storeName: string, products: Product[], sales: Sale[], lowStockThreshold: number, currencySymbol: string): string {
+function buildSystemPrompt(storeName: string, products: Product[], lowStockThreshold: number, currencySymbol: string): string {
   const today = new Date().toISOString().slice(0, 10);
 
   const expired = products.filter(p => getExpiryStatus(p.expiryDate) === 'expired');
@@ -26,16 +25,6 @@ function buildSystemPrompt(storeName: string, products: Product[], sales: Sale[]
     return `- ${p.name} [${p.category}] qty:${p.quantity}${p.unit}${expiryNote}${priceNote}`;
   }).join('\n');
 
-  const salesByProduct: Record<string, number> = {};
-  for (const s of sales) {
-    salesByProduct[s.productName] = (salesByProduct[s.productName] ?? 0) + s.quantitySold;
-  }
-  const topSales = Object.entries(salesByProduct)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, qty]) => `- ${name}: ${qty} sold`)
-    .join('\n');
-
   return `You are an AI assistant for Pocket Scanner, an inventory management app.
 You are helping the owner of store "${storeName}".
 Today's date: ${today}
@@ -48,10 +37,7 @@ Expired items: ${expired.length} (${expired.map(p => p.name).join(', ') || 'none
 Expiring soon: ${expiringSoon.length} (${expiringSoon.map(p => p.name).join(', ') || 'none'})
 Low stock: ${lowStock.length} (${lowStock.map(p => `${p.name}(${p.quantity})`).join(', ') || 'none'})
 
-=== TOP SELLING PRODUCTS ===
-${topSales || 'No sales recorded yet.'}
-
-Answer questions about inventory, expiry, low stock, sales, and give actionable recommendations.
+Answer questions about inventory, expiry, low stock, sales, and give actionable advice.
 Be concise and friendly. Use the store's currency symbol: ${currencySymbol}.
 If asked something unrelated to inventory/business, gently redirect.`;
 }
@@ -72,7 +58,6 @@ export default function AIChatPanel({ storeId, storeName }: Props) {
   const [error, setError] = useState('');
   const [contextLoaded, setContextLoaded] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -81,9 +66,8 @@ export default function AIChatPanel({ storeId, storeName }: Props) {
       Promise.all([
         getProductsByStore(storeId),
         getSalesByStore(storeId),
-      ]).then(([prods, salesData]) => {
+      ]).then(([prods]) => {
         setProducts(prods);
-        setSales(salesData);
         setContextLoaded(true);
       });
     }
@@ -109,7 +93,7 @@ export default function AIChatPanel({ storeId, storeName }: Props) {
     setLoading(true);
 
     try {
-      const systemPrompt = buildSystemPrompt(storeName, products, sales, lowStockThreshold, currencySymbol);
+      const systemPrompt = buildSystemPrompt(storeName, products, lowStockThreshold, currencySymbol);
       const reply = await sendChatMessage(newMessages, systemPrompt);
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (e) {

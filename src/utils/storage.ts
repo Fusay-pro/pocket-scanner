@@ -448,7 +448,9 @@ export async function setCachedBarcode(barcode: string, name: string, category: 
       const cache = JSON.parse(localStorage.getItem(LS_BARCODE_CACHE) || '{}');
       cache[barcode] = { name, category };
       localStorage.setItem(LS_BARCODE_CACHE, JSON.stringify(cache));
-    } catch {}
+    } catch {
+      // Ignore local cache write failures.
+    }
     return;
   }
   await supabase.from('barcode_cache')

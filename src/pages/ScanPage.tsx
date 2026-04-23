@@ -132,7 +132,11 @@ export default function ScanPage() {
 
   async function stopScanner() {
     if (scannerRef.current && scannerStarted.current) {
-      try { await scannerRef.current.stop(); } catch {}
+      try {
+        await scannerRef.current.stop();
+      } catch {
+        // Scanner may already be stopped during teardown.
+      }
       scannerStarted.current = false;
     }
     setScanning(false);
