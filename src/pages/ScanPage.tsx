@@ -52,7 +52,6 @@ export default function ScanPage() {
     if (!storeId) return;
     Promise.all([getStores(), getProductsByStore(storeId)]).then(([stores, products]) => {
       setStore(stores.find(s => s.id === storeId) || null);
-      // 4 most recently added products, sorted by addedAt desc
       const recent = [...products]
         .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
         .slice(0, 4);
@@ -121,7 +120,9 @@ export default function ScanPage() {
           }
           stopScanner();
         },
-        () => {}
+        () => {
+          // Ignore frame-level scan misses while the camera keeps looking.
+        }
       );
     } catch {
       setScanning(false);
