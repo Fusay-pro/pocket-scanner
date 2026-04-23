@@ -16,3 +16,153 @@ body {
 button, input, select, textarea {
   font-family: inherit;
 }
+
+/* ─── AI Insights Panel ──────────────────────────────────────────────────── */
+.ai-insights-section {
+  margin: 12px 0 0;
+}
+
+.ai-insights-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ai-insights-timestamp {
+  font-size: 11px;
+  color: var(--text-muted, #888);
+  margin-bottom: 12px;
+}
+
+.ai-insights-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted, #888);
+  font-size: 14px;
+  padding: 16px 0;
+}
+
+.ai-insights-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 0;
+  color: var(--text-muted, #888);
+  text-align: center;
+  font-size: 14px;
+}
+
+.ai-insights-subsection {
+  margin-top: 16px;
+}
+
+.ai-insights-subsection-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary, #555);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-restock-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--surface-2, #f5f5f5);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.ai-restock-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-restock-name {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-restock-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ai-badge-current {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--danger-light, #fee2e2);
+  color: var(--danger, #ef4444);
+}
+
+.ai-badge-suggested {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--success-light, #dcfce7);
+  color: var(--success, #16a34a);
+}
+
+.ai-restock-reason {
+  font-size: 12px;
+  color: var(--text-muted, #888);
+  line-height: 1.4;
+}
+
+.ai-watch-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--surface-2, #f5f5f5);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.ai-watch-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ai-watch-reason {
+  font-size: 12px;
+  color: var(--text-muted, #888);
+}
+
+.ai-summary-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary, #555);
+  background: var(--surface-2, #f5f5f5);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.ai-insights-error {
+  font-size: 13px;
+  color: var(--danger, #ef4444);
+  background: var(--danger-light, #fee2e2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
