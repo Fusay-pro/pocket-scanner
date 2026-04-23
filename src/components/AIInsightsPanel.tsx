@@ -111,8 +111,8 @@ export default function AIInsightsPanel({ storeId, storeName, products, sales }:
               <div className="ai-insights-subsection-title">
                 <Package size={13} /> Restock Now
               </div>
-              {result.restockItems.map((item, i) => (
-                <div key={i} className="ai-restock-card">
+              {result.restockItems.map((item) => (
+                <div key={item.productName} className="ai-restock-card">
                   <div className="ai-restock-card-row">
                     <span className="ai-restock-name">{item.productName}</span>
                     <div className="ai-restock-badges">
@@ -131,8 +131,8 @@ export default function AIInsightsPanel({ storeId, storeName, products, sales }:
               <div className="ai-insights-subsection-title">
                 <TrendingUp size={13} /> Watch These
               </div>
-              {result.watchItems.map((item, i) => (
-                <div key={i} className="ai-watch-item">
+              {result.watchItems.map((item) => (
+                <div key={item.productName} className="ai-watch-item">
                   <span className="ai-watch-name">{item.productName}</span>
                   <span className="ai-watch-reason">{item.reason}</span>
                 </div>
