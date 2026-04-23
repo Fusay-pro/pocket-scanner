@@ -33,7 +33,8 @@ export async function sendChatMessage(
   }
 
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Empty response from AI');
-  return content;
+  const raw = data.choices?.[0]?.message?.content;
+  if (!raw) throw new Error('Empty response from AI');
+  // Strip <think>...</think> reasoning blocks some models prepend
+  return raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 }

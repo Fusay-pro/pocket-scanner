@@ -114,7 +114,7 @@ export async function fetchAIInsights(
   const userContent = buildPrompt(storeName, products, sales);
   const raw = await sendChatMessage([{ role: 'user', content: userContent }], SYSTEM_PROMPT);
 
-  // Strip markdown code fences if the model wraps the response
+  // Strip markdown code fences (thinking blocks already stripped in sendChatMessage)
   const cleaned = raw.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
   const result: AIInsightsResult = JSON.parse(cleaned);
 
