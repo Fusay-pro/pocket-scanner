@@ -15,17 +15,22 @@ function buildCsv(rows: string[][]): string {
   return rows.map(row => row.map(escapeCell).join(',')).join('\n');
 }
 
-function triggerDownload(content: string, filename: string) {
+async function triggerDownload(content: string, filename: string) {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  if (navigator.share) {
+    const file = new File([blob], filename, { type: 'text/csv' });
+    await navigator.share({ files: [file], title: filename });
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
 }
 
-export function exportInventoryCsv(stores: Store[], products: Product[]) {
+export async function exportInventoryCsv(stores: Store[], products: Product[]) {
   const storeMap = Object.fromEntries(stores.map(s => [s.id, s.name]));
   const rows: string[][] = [[
     'Store', 'Product Name', 'Barcode', 'Category', 'Supplier',
@@ -51,10 +56,10 @@ export function exportInventoryCsv(stores: Store[], products: Product[]) {
       p.addedAt,
     ]);
   }
-  triggerDownload(buildCsv(rows), `inventory-${new Date().toISOString().slice(0,10)}.csv`);
+  await triggerDownload(buildCsv(rows), `inventory-${new Date().toISOString().slice(0,10)}.csv`);
 }
 
-export function exportSalesCsv(stores: Store[], sales: Sale[]) {
+export async function exportSalesCsv(stores: Store[], sales: Sale[]) {
   const storeMap = Object.fromEntries(stores.map(s => [s.id, s.name]));
   const rows: string[][] = [[
     'Store', 'Product Name', 'Barcode', 'Category',
@@ -76,5 +81,61 @@ export function exportSalesCsv(stores: Store[], sales: Sale[]) {
       s.soldAt,
     ]);
   }
-  triggerDownload(buildCsv(rows), `sales-${new Date().toISOString().slice(0,10)}.csv`);
+  await triggerDownload(buildCsv(rows), `sales-${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+export interface ImportedProduct {
+  storeId: string;
+  barcode: string;
+  name: string;
+  category: string;
+  supplier: string;
+  quantity: number;
+  unit: string;
+  expiryDate: string;
+  costPrice: number | null;
+  sellPrice: number | null;
+  minQty: number | null;
+  notes: string;
+}
+
+function parseCsvLine(line: string): string[] {
+  const cells: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (ch === ',' && !inQuotes) {
+      cells.push(current); current = '';
+    } else {
+      current += ch;
+    }
+  }
+  cells.push(current);
+  return cells;
+}
+
+export function parseInventoryCsv(csv: string, storeMap: Record<string, string>): ImportedProduct[] {
+  const lines = csv.trim().split('\n');
+  const storeNameToId = Object.fromEntries(Object.entries(storeMap).map(([id, name]) => [name, id]));
+  return lines.slice(1).map(line => {
+    const [store, name, barcode, category, supplier, quantity, unit, expiryDate, costPrice, sellPrice, minQty] = parseCsvLine(line);
+    return {
+      storeId: storeNameToId[store] ?? Object.keys(storeMap)[0],
+      barcode: barcode ?? '',
+      name: name ?? '',
+      category: category ?? 'Other',
+      supplier: supplier ?? '',
+      quantity: parseFloat(quantity) || 0,
+      unit: unit ?? 'pcs',
+      expiryDate: expiryDate ?? '',
+      costPrice: costPrice ? parseFloat(costPrice) : null,
+      sellPrice: sellPrice ? parseFloat(sellPrice) : null,
+      minQty: minQty ? parseFloat(minQty) : null,
+      notes: '',
+    };
+  }).filter(p => p.name);
 }

@@ -1,14 +1,14 @@
 import { errMsg } from '../utils/errMsg';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Globe, Sun, Moon, BarChart2, Trash2,
   AlertTriangle, CheckCircle, Loader2, Shield, TrendingDown,
-  MapPin, Download
+  MapPin, Download, Upload
 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
-import { getStoreRole, deleteAllProductsByStore, getStores, updateStore, getAllProducts, getAllSales } from '../utils/storage';
-import { exportInventoryCsv, exportSalesCsv } from '../utils/csvExport';
+import { getStoreRole, deleteAllProductsByStore, getStores, updateStore, getAllProducts, getAllSales, saveProduct } from '../utils/storage';
+import { exportInventoryCsv, exportSalesCsv, parseInventoryCsv } from '../utils/csvExport';
 import { t } from '../i18n';
 import { isSupabaseConfigured } from '../lib/supabase';
 import StoreTabBar from '../components/StoreTabBar';
@@ -40,6 +40,9 @@ export default function SettingsPage() {
   const [storeLocation, setStoreLocation] = useState('');
   const [savingStore, setSavingStore] = useState(false);
   const [storeInfoSavedToast, setStoreInfoSavedToast] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importToast, setImportToast] = useState('');
+  const importRef = useRef<HTMLInputElement>(null);
 
   const isOwner = !isSupabaseConfigured || role === 'owner';
 
@@ -86,6 +89,26 @@ export default function SettingsPage() {
       const [stores, sales] = await Promise.all([getStores(), getAllSales()]);
       exportSalesCsv(stores, sales);
     } catch (e) { setError(errMsg(e)); }
+  }
+
+  async function handleImportInventory(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setError('');
+    try {
+      const text = await file.text();
+      const stores = await getStores();
+      const storeMap = Object.fromEntries(stores.map(s => [s.id, s.name]));
+      const products = parseInventoryCsv(text, storeMap);
+      await Promise.all(products.map(p => saveProduct(p)));
+      setImportToast(`Imported ${products.length} products`);
+      setTimeout(() => setImportToast(''), 3000);
+    } catch (e) { setError(errMsg(e)); }
+    finally {
+      setImporting(false);
+      if (importRef.current) importRef.current.value = '';
+    }
   }
 
   const tr = (key: Parameters<typeof t>[1]) => t(lang, key);
@@ -230,7 +253,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ── Export Data ── */}
+        {/* ── Export / Import Data ── */}
         {isOwner && (
           <div className="settings-section">
             <div className="settings-section-label"><Download size={13} /> {tr('exportDataLabel')}</div>
@@ -242,6 +265,11 @@ export default function SettingsPage() {
                 <button className="btn-secondary" onClick={handleExportSales}>
                   <Download size={14} /> {tr('exportSalesBtn')}
                 </button>
+                <button className="btn-secondary" onClick={() => importRef.current?.click()} disabled={importing}>
+                  {importing ? <Loader2 size={14} className="spin" /> : <Upload size={14} />} Import Inventory CSV
+                </button>
+                <input ref={importRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImportInventory} />
+                {importToast && <div style={{ color: 'var(--success)', fontSize: '13px' }}>{importToast}</div>}
               </div>
             </div>
           </div>
