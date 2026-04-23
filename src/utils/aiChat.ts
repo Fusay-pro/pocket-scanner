@@ -1,3 +1,4 @@
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -7,7 +8,7 @@ export async function sendChatMessage(
   messages: ChatMessage[],
   systemPrompt: string,
 ): Promise<string> {
-  const res = await fetch('/api/ai-chat', {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
