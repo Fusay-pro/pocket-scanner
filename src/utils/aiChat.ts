@@ -1,4 +1,5 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -12,6 +13,8 @@ export async function sendChatMessage(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     },
     body: JSON.stringify({
       systemPrompt,

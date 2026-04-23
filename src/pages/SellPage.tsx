@@ -76,7 +76,9 @@ export default function SellPage() {
           }
           stopScanner();
         },
-        () => {}
+        () => {
+          // Ignore frame-level scan misses while the camera keeps looking.
+        }
       );
     } catch {
       setScanning(false);
