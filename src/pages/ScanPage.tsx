@@ -5,6 +5,7 @@ import { ArrowLeft, ScanLine, Camera, CameraOff, CheckCircle, Save, Loader2, Clo
 import { Html5Qrcode } from 'html5-qrcode';
 import { getStores, getProductsByStore, saveProduct, receiveStock, setCachedBarcode } from '../utils/storage';
 import { lookupBarcode } from '../utils/barcodeApi';
+import { identifyProductFrame, captureVideoFrame } from '../utils/aiVision';
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../i18n';
 import type { Store, Product } from '../types';
@@ -40,6 +41,8 @@ export default function ScanPage() {
   const [form, setForm] = useState(() => ({ ...EMPTY_FORM, unit: defaultUnit }));
   const [autoFilled, setAutoFilled] = useState(false);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lookupFailed, setLookupFailed] = useState(false);
+  const [aiIdentifying, setAiIdentifying] = useState(false);
 
   const [receiveBarcode, setReceiveBarcode] = useState('');
   const [receiveProduct, setReceiveProduct] = useState<Product | null>(null);
@@ -63,12 +66,16 @@ export default function ScanPage() {
 
   function triggerLookup(value: string) {
     if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current);
+    setLookupFailed(false);
     if (!value.trim()) return;
     lookupTimerRef.current = setTimeout(async () => {
       const result = await lookupBarcode(value.trim());
       if (result) {
         setForm(prev => ({ ...prev, name: result.name, category: result.category }));
         setAutoFilled(true);
+        setLookupFailed(false);
+      } else {
+        setLookupFailed(true);
       }
     }, 600);
   }
@@ -76,7 +83,29 @@ export default function ScanPage() {
   function handleBarcodeChange(value: string) {
     setForm(prev => ({ ...prev, barcode: value }));
     setAutoFilled(false);
+    setLookupFailed(false);
     triggerLookup(value);
+  }
+
+  async function handleAiCapture() {
+    if (!scanning) {
+      await startScanner();
+      return;
+    }
+    const frame = captureVideoFrame();
+    if (!frame) { setError('Could not capture frame. Make sure camera is active.'); return; }
+    setAiIdentifying(true);
+    setError('');
+    try {
+      const result = await identifyProductFrame(frame);
+      setForm(prev => ({ ...prev, name: result.name, category: result.category }));
+      setAutoFilled(true);
+      setLookupFailed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI could not identify product');
+    } finally {
+      setAiIdentifying(false);
+    }
   }
 
   function handleReceiveBarcodeChange(value: string) {
@@ -203,6 +232,7 @@ export default function ScanPage() {
       setForm({ ...EMPTY_FORM, unit: defaultUnit });
       setScannedCode('');
       setAutoFilled(false);
+      setLookupFailed(false);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       setError(errMsg(e));
@@ -334,6 +364,27 @@ export default function ScanPage() {
               <label>{tr('barcodeLabel')}</label>
               <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder={tr('scanOrEnterManually')} />
             </div>
+
+            {lookupFailed && !autoFilled && form.barcode.trim() && (
+              <div style={{ marginTop: '6px', marginBottom: '8px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  {scanning ? '👆 Flip product to front and tap Capture' : 'Open camera then flip product to front'}
+                </p>
+                <button
+                  type="button"
+                  className="btn-secondary full-width"
+                  onClick={handleAiCapture}
+                  disabled={aiIdentifying}
+                  style={{ fontSize: '13px', gap: '6px' }}
+                >
+                  {aiIdentifying
+                    ? <><Loader2 size={14} className="spin" /> Identifying…</>
+                    : scanning
+                      ? <><Sparkles size={14} /> Capture &amp; Identify</>
+                      : <><Camera size={14} /> Open Camera to Identify</>}
+                </button>
+              </div>
+            )}
 
             <div className="form-group">
               <label>{tr('productNameLabel')} *</label>
