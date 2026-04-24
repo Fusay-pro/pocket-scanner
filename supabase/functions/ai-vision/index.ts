@@ -9,8 +9,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { imageBase64 } = await req.json();
-    if (!imageBase64) throw new Error('Missing imageBase64');
+    const { images } = await req.json();
+    if (!images || !images.length) throw new Error('Missing images');
 
     const ollamaUrl = Deno.env.get('OLLAMA_URL');
     const ollamaModel = Deno.env.get('OLLAMA_MODEL') ?? 'llava:7b';
@@ -25,8 +25,8 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: 'Look at this product image. Reply with ONLY a JSON object, no other text: {"name": "product name", "category": "one of: Food, Beverage, Dairy, Produce, Bakery, Frozen, Snacks, Personal Care, Cleaning, Other"}',
-            images: [imageBase64],
+            content: 'Look at these product photos (front and/or back). Reply with ONLY a JSON object, no other text: {"name": "product name here", "category": "one of: Food, Beverage, Dairy, Produce, Bakery, Frozen, Snacks, Personal Care, Cleaning, Other"}',
+            images: images,
           },
         ],
       }),

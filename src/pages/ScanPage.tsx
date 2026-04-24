@@ -5,10 +5,10 @@ import { ArrowLeft, ScanLine, Camera, CameraOff, CheckCircle, Save, Loader2, Clo
 import { Html5Qrcode } from 'html5-qrcode';
 import { getStores, getProductsByStore, saveProduct, receiveStock, setCachedBarcode } from '../utils/storage';
 import { lookupBarcode } from '../utils/barcodeApi';
+import { identifyProductFrames, captureVideoFrame } from '../utils/aiVision';
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../i18n';
 import type { Store, Product } from '../types';
-import { identifyProductFrame, captureVideoFrame } from '../utils/aiVision';
 
 const CATEGORIES = ['Food', 'Beverage', 'Dairy', 'Produce', 'Bakery', 'Frozen', 'Snacks', 'Personal Care', 'Cleaning', 'Other'];
 const UNITS = ['pcs', 'box', 'pack', 'kg', 'g', 'L', 'mL', 'bottle', 'can', 'bag'];
@@ -41,7 +41,8 @@ export default function ScanPage() {
   const [form, setForm] = useState(() => ({ ...EMPTY_FORM, unit: defaultUnit }));
   const [autoFilled, setAutoFilled] = useState(false);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [lookupFailed, setLookupFailed] = useState(false);
+  const [aiCaptureStep, setAiCaptureStep] = useState<null | 'front' | 'back'>(null);
+  const [frontFrame, setFrontFrame] = useState<string | null>(null);
   const [aiIdentifying, setAiIdentifying] = useState(false);
 
   const [receiveBarcode, setReceiveBarcode] = useState('');
@@ -55,6 +56,7 @@ export default function ScanPage() {
     if (!storeId) return;
     Promise.all([getStores(), getProductsByStore(storeId)]).then(([stores, products]) => {
       setStore(stores.find(s => s.id === storeId) || null);
+      // 4 most recently added products, sorted by addedAt desc
       const recent = [...products]
         .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
         .slice(0, 4);
@@ -65,16 +67,15 @@ export default function ScanPage() {
 
   function triggerLookup(value: string) {
     if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current);
-    setLookupFailed(false);
     if (!value.trim()) return;
     lookupTimerRef.current = setTimeout(async () => {
       const result = await lookupBarcode(value.trim());
       if (result) {
         setForm(prev => ({ ...prev, name: result.name, category: result.category }));
         setAutoFilled(true);
-        setLookupFailed(false);
       } else {
-        setLookupFailed(true);
+        setAiCaptureStep('front');
+        startScanner();
       }
     }, 600);
   }
@@ -82,28 +83,36 @@ export default function ScanPage() {
   function handleBarcodeChange(value: string) {
     setForm(prev => ({ ...prev, barcode: value }));
     setAutoFilled(false);
-    setLookupFailed(false);
+    setAiCaptureStep(null);
+    setFrontFrame(null);
     triggerLookup(value);
   }
 
-  async function handleAiCapture() {
-    if (!scanning) {
-      await startScanner();
-      return;
-    }
-    const frame = captureVideoFrame();
-    if (!frame) { setError('Could not capture frame. Make sure camera is active.'); return; }
+  async function handleSendFrames(front: string, back: string | null) {
     setAiIdentifying(true);
     setError('');
     try {
-      const result = await identifyProductFrame(frame);
+      const result = await identifyProductFrames(front, back);
       setForm(prev => ({ ...prev, name: result.name, category: result.category }));
       setAutoFilled(true);
-      setLookupFailed(false);
+      setAiCaptureStep(null);
+      setFrontFrame(null);
+      stopScanner();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'AI could not identify product');
     } finally {
       setAiIdentifying(false);
+    }
+  }
+
+  function handleCaptureFrame(side: 'front' | 'back') {
+    const frame = captureVideoFrame();
+    if (!frame) { setError('Could not capture — make sure camera is active.'); return; }
+    if (side === 'front') {
+      setFrontFrame(frame);
+      setAiCaptureStep('back');
+    } else {
+      handleSendFrames(frontFrame!, frame);
     }
   }
 
@@ -149,9 +158,7 @@ export default function ScanPage() {
           }
           stopScanner();
         },
-        () => {
-          // Ignore frame-level scan misses while the camera keeps looking.
-        }
+        () => {}
       );
     } catch {
       setScanning(false);
@@ -233,6 +240,8 @@ export default function ScanPage() {
       setForm({ ...EMPTY_FORM, unit: defaultUnit });
       setScannedCode('');
       setAutoFilled(false);
+      setAiCaptureStep(null);
+      setFrontFrame(null);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       setError(errMsg(e));
@@ -299,10 +308,59 @@ export default function ScanPage() {
           )}
         </div>
         <div className="scanner-controls">
-          <button className={scanning ? 'btn-secondary' : 'btn-primary'} onClick={scanning ? stopScanner : startScanner}>
-            {scanning ? <><CameraOff size={16} /> {tr('stopCamera')}</> : <><Camera size={16} /> {tr('openCamera')}</>}
-          </button>
+          {!aiCaptureStep && (
+            <button className={scanning ? 'btn-secondary' : 'btn-primary'} onClick={scanning ? stopScanner : startScanner}>
+              {scanning ? <><CameraOff size={16} /> {tr('stopCamera')}</> : <><Camera size={16} /> {tr('openCamera')}</>}
+            </button>
+          )}
+          {scanning && !aiCaptureStep && (
+            <button className="btn-secondary" style={{ fontSize: '13px' }} onClick={() => setAiCaptureStep('front')}>
+              <Sparkles size={14} /> Can't scan?
+            </button>
+          )}
         </div>
+
+        {aiCaptureStep && (
+          <div style={{ padding: '10px 12px', background: 'var(--card-bg)', borderTop: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
+              {aiCaptureStep === 'front'
+                ? '📸 Point camera at the FRONT of the product'
+                : '📸 Now point camera at the BACK of the product'}
+            </p>
+            {!scanning && (
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                Camera is off — tap Open Camera first
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              {!scanning && (
+                <button className="btn-primary" style={{ flex: 1, fontSize: '13px' }} onClick={startScanner}>
+                  <Camera size={14} /> Open Camera
+                </button>
+              )}
+              {scanning && (
+                <button
+                  className="btn-primary"
+                  style={{ flex: 1, fontSize: '13px' }}
+                  onClick={() => handleCaptureFrame(aiCaptureStep)}
+                  disabled={aiIdentifying}
+                >
+                  {aiIdentifying
+                    ? <><Loader2 size={14} className="spin" /> Identifying…</>
+                    : `Capture ${aiCaptureStep === 'front' ? 'Front' : 'Back'}`}
+                </button>
+              )}
+              {aiCaptureStep === 'back' && !aiIdentifying && (
+                <button className="btn-secondary" style={{ fontSize: '13px' }} onClick={() => handleSendFrames(frontFrame!, null)}>
+                  Skip Back
+                </button>
+              )}
+              <button className="btn-secondary" style={{ fontSize: '13px' }} onClick={() => { setAiCaptureStep(null); setFrontFrame(null); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {mode === 'receive' && (
@@ -363,27 +421,8 @@ export default function ScanPage() {
             <div className="form-group">
               <label>{tr('barcodeLabel')}</label>
               <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder={tr('scanOrEnterManually')} />
-              {lookupFailed && !autoFilled && form.barcode.trim() && (
-                <div style={{ marginTop: '6px' }}>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                    {scanning ? '👆 Flip product to front and tap Capture' : 'Open camera then flip product to front'}
-                  </p>
-                  <button
-                    type="button"
-                    className="btn-secondary full-width"
-                    onClick={handleAiCapture}
-                    disabled={aiIdentifying}
-                    style={{ fontSize: '13px', gap: '6px' }}
-                  >
-                    {aiIdentifying
-                      ? <><Loader2 size={14} className="spin" /> Identifying…</>
-                      : scanning
-                        ? <><Sparkles size={14} /> Capture & Identify</>
-                        : <><Camera size={14} /> Open Camera to Identify</>}
-                  </button>
-                </div>
-              )}
             </div>
+
 
             <div className="form-group">
               <label>{tr('productNameLabel')} *</label>
