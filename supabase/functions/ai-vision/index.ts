@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { imageBase64, mediaType } = await req.json();
+    const { imageBase64 } = await req.json();
     if (!imageBase64) throw new Error('Missing imageBase64');
 
     const ollamaUrl = Deno.env.get('OLLAMA_URL');

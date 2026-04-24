@@ -8,6 +8,7 @@ import { lookupBarcode } from '../utils/barcodeApi';
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../i18n';
 import type { Store, Product } from '../types';
+import { identifyProductImage } from '../utils/aiVision';
 
 const CATEGORIES = ['Food', 'Beverage', 'Dairy', 'Produce', 'Bakery', 'Frozen', 'Snacks', 'Personal Care', 'Cleaning', 'Other'];
 const UNITS = ['pcs', 'box', 'pack', 'kg', 'g', 'L', 'mL', 'bottle', 'can', 'bag'];
@@ -40,6 +41,9 @@ export default function ScanPage() {
   const [form, setForm] = useState(() => ({ ...EMPTY_FORM, unit: defaultUnit }));
   const [autoFilled, setAutoFilled] = useState(false);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lookupFailed, setLookupFailed] = useState(false);
+  const [aiIdentifying, setAiIdentifying] = useState(false);
+  const aiFileRef = useRef<HTMLInputElement>(null);
 
   const [receiveBarcode, setReceiveBarcode] = useState('');
   const [receiveProduct, setReceiveProduct] = useState<Product | null>(null);
@@ -62,12 +66,16 @@ export default function ScanPage() {
 
   function triggerLookup(value: string) {
     if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current);
+    setLookupFailed(false);
     if (!value.trim()) return;
     lookupTimerRef.current = setTimeout(async () => {
       const result = await lookupBarcode(value.trim());
       if (result) {
         setForm(prev => ({ ...prev, name: result.name, category: result.category }));
         setAutoFilled(true);
+        setLookupFailed(false);
+      } else {
+        setLookupFailed(true);
       }
     }, 600);
   }
@@ -75,7 +83,26 @@ export default function ScanPage() {
   function handleBarcodeChange(value: string) {
     setForm(prev => ({ ...prev, barcode: value }));
     setAutoFilled(false);
+    setLookupFailed(false);
     triggerLookup(value);
+  }
+
+  async function handleAiIdentify(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAiIdentifying(true);
+    setError('');
+    try {
+      const result = await identifyProductImage(file);
+      setForm(prev => ({ ...prev, name: result.name, category: result.category }));
+      setAutoFilled(true);
+      setLookupFailed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI could not identify product');
+    } finally {
+      setAiIdentifying(false);
+      if (aiFileRef.current) aiFileRef.current.value = '';
+    }
   }
 
   function handleReceiveBarcodeChange(value: string) {
@@ -334,6 +361,29 @@ export default function ScanPage() {
             <div className="form-group">
               <label>{tr('barcodeLabel')}</label>
               <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder={tr('scanOrEnterManually')} />
+              {lookupFailed && !autoFilled && form.barcode.trim() && (
+                <div style={{ marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary full-width"
+                    onClick={() => aiFileRef.current?.click()}
+                    disabled={aiIdentifying}
+                    style={{ fontSize: '13px', gap: '6px' }}
+                  >
+                    {aiIdentifying
+                      ? <><Loader2 size={14} className="spin" /> Identifying…</>
+                      : <><Sparkles size={14} /> AI Identify Product</>}
+                  </button>
+                  <input
+                    ref={aiFileRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    style={{ display: 'none' }}
+                    onChange={handleAiIdentify}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="form-group">
