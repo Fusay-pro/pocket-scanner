@@ -1,10 +1,13 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
-export async function identifyProductFrame(imageBase64: string): Promise<{ name: string; category: string }> {
+export async function identifyProductImage(file: File): Promise<{ name: string; category: string }> {
+  const mediaType = (file.type || 'image/jpeg') as string;
+  const imageBase64 = await fileToBase64(file);
+
   const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-vision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64, mediaType: 'image/jpeg' }),
+    body: JSON.stringify({ imageBase64, mediaType }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
@@ -15,12 +18,14 @@ export async function identifyProductFrame(imageBase64: string): Promise<{ name:
   return { name: data.name, category: data.category };
 }
 
-export function captureVideoFrame(): string | null {
-  const video = document.querySelector('#qr-reader video') as HTMLVideoElement | null;
-  if (!video || !video.videoWidth) return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d')?.drawImage(video, 0, 0);
-  return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }

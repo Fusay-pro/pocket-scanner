@@ -5,7 +5,7 @@ import { ArrowLeft, ScanLine, Camera, CameraOff, CheckCircle, Save, Loader2, Clo
 import { Html5Qrcode } from 'html5-qrcode';
 import { getStores, getProductsByStore, saveProduct, receiveStock, setCachedBarcode } from '../utils/storage';
 import { lookupBarcode } from '../utils/barcodeApi';
-import { identifyProductFrame, captureVideoFrame } from '../utils/aiVision';
+import { identifyProductImage } from '../utils/aiVision';
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../i18n';
 import type { Store, Product } from '../types';
@@ -43,6 +43,7 @@ export default function ScanPage() {
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [lookupFailed, setLookupFailed] = useState(false);
   const [aiIdentifying, setAiIdentifying] = useState(false);
+  const aiFileRef = useRef<HTMLInputElement>(null);
 
   const [receiveBarcode, setReceiveBarcode] = useState('');
   const [receiveProduct, setReceiveProduct] = useState<Product | null>(null);
@@ -87,17 +88,13 @@ export default function ScanPage() {
     triggerLookup(value);
   }
 
-  async function handleAiCapture() {
-    if (!scanning) {
-      await startScanner();
-      return;
-    }
-    const frame = captureVideoFrame();
-    if (!frame) { setError('Could not capture frame. Make sure camera is active.'); return; }
+  async function handleAiIdentify(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setAiIdentifying(true);
     setError('');
     try {
-      const result = await identifyProductFrame(frame);
+      const result = await identifyProductImage(file);
       setForm(prev => ({ ...prev, name: result.name, category: result.category }));
       setAutoFilled(true);
       setLookupFailed(false);
@@ -105,6 +102,7 @@ export default function ScanPage() {
       setError(err instanceof Error ? err.message : 'AI could not identify product');
     } finally {
       setAiIdentifying(false);
+      if (aiFileRef.current) aiFileRef.current.value = '';
     }
   }
 
@@ -367,22 +365,25 @@ export default function ScanPage() {
 
             {lookupFailed && !autoFilled && form.barcode.trim() && (
               <div style={{ marginTop: '6px', marginBottom: '8px' }}>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  {scanning ? '👆 Flip product to front and tap Capture' : 'Open camera then flip product to front'}
-                </p>
                 <button
                   type="button"
                   className="btn-secondary full-width"
-                  onClick={handleAiCapture}
+                  onClick={() => aiFileRef.current?.click()}
                   disabled={aiIdentifying}
                   style={{ fontSize: '13px', gap: '6px' }}
                 >
                   {aiIdentifying
                     ? <><Loader2 size={14} className="spin" /> Identifying…</>
-                    : scanning
-                      ? <><Sparkles size={14} /> Capture &amp; Identify</>
-                      : <><Camera size={14} /> Open Camera to Identify</>}
+                    : <><Sparkles size={14} /> AI Identify Product</>}
                 </button>
+                <input
+                  ref={aiFileRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={handleAiIdentify}
+                />
               </div>
             )}
 
