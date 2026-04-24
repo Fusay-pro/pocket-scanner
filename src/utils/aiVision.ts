@@ -1,13 +1,16 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
-export async function identifyProductImage(file: File): Promise<{ name: string; category: string }> {
-  const mediaType = (file.type || 'image/jpeg') as string;
-  const imageBase64 = await fileToBase64(file);
+export async function identifyProductImages(
+  front: File,
+  back: File | null,
+): Promise<{ name: string; category: string }> {
+  const images: string[] = [await fileToBase64(front)];
+  if (back) images.push(await fileToBase64(back));
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-vision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64, mediaType }),
+    body: JSON.stringify({ images }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
