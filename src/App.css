@@ -76,6 +76,8 @@ body {
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 #root {
@@ -98,7 +100,6 @@ body {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  padding-top: calc(10px + env(safe-area-inset-top));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
