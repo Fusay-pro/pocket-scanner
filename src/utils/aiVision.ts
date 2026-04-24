@@ -1,11 +1,11 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
-export async function identifyProductImages(
-  front: File,
-  back: File | null,
+export async function identifyProductFrames(
+  frontBase64: string,
+  backBase64: string | null,
 ): Promise<{ name: string; category: string }> {
-  const images: string[] = [await fileToBase64(front)];
-  if (back) images.push(await fileToBase64(back));
+  const images = [frontBase64];
+  if (backBase64) images.push(backBase64);
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-vision`, {
     method: 'POST',
@@ -21,14 +21,12 @@ export async function identifyProductImages(
   return { name: data.name, category: data.category };
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+export function captureVideoFrame(): string | null {
+  const video = document.querySelector('#qr-reader video') as HTMLVideoElement | null;
+  if (!video || !video.videoWidth) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d')?.drawImage(video, 0, 0);
+  return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 }

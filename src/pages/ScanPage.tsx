@@ -5,7 +5,7 @@ import { ArrowLeft, ScanLine, Camera, CameraOff, CheckCircle, Save, Loader2, Clo
 import { Html5Qrcode } from 'html5-qrcode';
 import { getStores, getProductsByStore, saveProduct, receiveStock, setCachedBarcode } from '../utils/storage';
 import { lookupBarcode } from '../utils/barcodeApi';
-import { identifyProductImages } from '../utils/aiVision';
+import { identifyProductFrames, captureVideoFrame } from '../utils/aiVision';
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../i18n';
 import type { Store, Product } from '../types';
@@ -41,12 +41,9 @@ export default function ScanPage() {
   const [form, setForm] = useState(() => ({ ...EMPTY_FORM, unit: defaultUnit }));
   const [autoFilled, setAutoFilled] = useState(false);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showAiCapture, setShowAiCapture] = useState(false);
-  const [frontFile, setFrontFile] = useState<File | null>(null);
-  const [backFile, setBackFile] = useState<File | null>(null);
+  const [aiCaptureStep, setAiCaptureStep] = useState<null | 'front' | 'back'>(null);
+  const [frontFrame, setFrontFrame] = useState<string | null>(null);
   const [aiIdentifying, setAiIdentifying] = useState(false);
-  const frontFileRef = useRef<HTMLInputElement>(null);
-  const backFileRef = useRef<HTMLInputElement>(null);
 
   const [receiveBarcode, setReceiveBarcode] = useState('');
   const [receiveProduct, setReceiveProduct] = useState<Product | null>(null);
@@ -77,7 +74,8 @@ export default function ScanPage() {
         setForm(prev => ({ ...prev, name: result.name, category: result.category }));
         setAutoFilled(true);
       } else {
-        setShowAiCapture(true);
+        setAiCaptureStep('front');
+        startScanner();
       }
     }, 600);
   }
@@ -85,29 +83,36 @@ export default function ScanPage() {
   function handleBarcodeChange(value: string) {
     setForm(prev => ({ ...prev, barcode: value }));
     setAutoFilled(false);
-    setShowAiCapture(false);
-    setFrontFile(null);
-    setBackFile(null);
+    setAiCaptureStep(null);
+    setFrontFrame(null);
     triggerLookup(value);
   }
 
-  async function handleIdentify() {
-    if (!frontFile) return;
+  async function handleSendFrames(front: string, back: string | null) {
     setAiIdentifying(true);
     setError('');
     try {
-      const result = await identifyProductImages(frontFile, backFile);
+      const result = await identifyProductFrames(front, back);
       setForm(prev => ({ ...prev, name: result.name, category: result.category }));
       setAutoFilled(true);
-      setShowAiCapture(false);
-      setFrontFile(null);
-      setBackFile(null);
+      setAiCaptureStep(null);
+      setFrontFrame(null);
+      stopScanner();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'AI could not identify product');
     } finally {
       setAiIdentifying(false);
-      if (frontFileRef.current) frontFileRef.current.value = '';
-      if (backFileRef.current) backFileRef.current.value = '';
+    }
+  }
+
+  function handleCaptureFrame(side: 'front' | 'back') {
+    const frame = captureVideoFrame();
+    if (!frame) { setError('Could not capture — make sure camera is active.'); return; }
+    if (side === 'front') {
+      setFrontFrame(frame);
+      setAiCaptureStep('back');
+    } else {
+      handleSendFrames(frontFrame!, frame);
     }
   }
 
@@ -235,9 +240,8 @@ export default function ScanPage() {
       setForm({ ...EMPTY_FORM, unit: defaultUnit });
       setScannedCode('');
       setAutoFilled(false);
-      setShowAiCapture(false);
-      setFrontFile(null);
-      setBackFile(null);
+      setAiCaptureStep(null);
+      setFrontFrame(null);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       setError(errMsg(e));
@@ -304,19 +308,59 @@ export default function ScanPage() {
           )}
         </div>
         <div className="scanner-controls">
-          <button className={scanning ? 'btn-secondary' : 'btn-primary'} onClick={scanning ? stopScanner : startScanner}>
-            {scanning ? <><CameraOff size={16} /> {tr('stopCamera')}</> : <><Camera size={16} /> {tr('openCamera')}</>}
-          </button>
-          {scanning && (
-            <button
-              className="btn-secondary"
-              onClick={() => { setShowAiCapture(true); stopScanner(); }}
-              style={{ fontSize: '13px' }}
-            >
+          {!aiCaptureStep && (
+            <button className={scanning ? 'btn-secondary' : 'btn-primary'} onClick={scanning ? stopScanner : startScanner}>
+              {scanning ? <><CameraOff size={16} /> {tr('stopCamera')}</> : <><Camera size={16} /> {tr('openCamera')}</>}
+            </button>
+          )}
+          {scanning && !aiCaptureStep && (
+            <button className="btn-secondary" style={{ fontSize: '13px' }} onClick={() => setAiCaptureStep('front')}>
               <Sparkles size={14} /> Can't scan?
             </button>
           )}
         </div>
+
+        {aiCaptureStep && (
+          <div style={{ padding: '10px 12px', background: 'var(--card-bg)', borderTop: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
+              {aiCaptureStep === 'front'
+                ? '📸 Point camera at the FRONT of the product'
+                : '📸 Now point camera at the BACK of the product'}
+            </p>
+            {!scanning && (
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                Camera is off — tap Open Camera first
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              {!scanning && (
+                <button className="btn-primary" style={{ flex: 1, fontSize: '13px' }} onClick={startScanner}>
+                  <Camera size={14} /> Open Camera
+                </button>
+              )}
+              {scanning && (
+                <button
+                  className="btn-primary"
+                  style={{ flex: 1, fontSize: '13px' }}
+                  onClick={() => handleCaptureFrame(aiCaptureStep)}
+                  disabled={aiIdentifying}
+                >
+                  {aiIdentifying
+                    ? <><Loader2 size={14} className="spin" /> Identifying…</>
+                    : `Capture ${aiCaptureStep === 'front' ? 'Front' : 'Back'}`}
+                </button>
+              )}
+              {aiCaptureStep === 'back' && !aiIdentifying && (
+                <button className="btn-secondary" style={{ fontSize: '13px' }} onClick={() => handleSendFrames(frontFrame!, null)}>
+                  Skip Back
+                </button>
+              )}
+              <button className="btn-secondary" style={{ fontSize: '13px' }} onClick={() => { setAiCaptureStep(null); setFrontFrame(null); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {mode === 'receive' && (
@@ -379,47 +423,6 @@ export default function ScanPage() {
               <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder={tr('scanOrEnterManually')} />
             </div>
 
-            {showAiCapture && !autoFilled && (
-              <div style={{ marginTop: '8px', marginBottom: '8px', padding: '10px', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
-                  <Sparkles size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                  Capture product photos for AI identification
-                </p>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                  <button
-                    type="button"
-                    className={frontFile ? 'btn-primary' : 'btn-secondary'}
-                    style={{ flex: 1, fontSize: '12px' }}
-                    onClick={() => frontFileRef.current?.click()}
-                    disabled={aiIdentifying}
-                  >
-                    <Camera size={13} /> {frontFile ? '✓ Front' : 'Capture Front'}
-                  </button>
-                  <button
-                    type="button"
-                    className={backFile ? 'btn-primary' : 'btn-secondary'}
-                    style={{ flex: 1, fontSize: '12px' }}
-                    onClick={() => backFileRef.current?.click()}
-                    disabled={aiIdentifying}
-                  >
-                    <Camera size={13} /> {backFile ? '✓ Back' : 'Capture Back'}
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  className="btn-primary full-width"
-                  onClick={handleIdentify}
-                  disabled={!frontFile || aiIdentifying}
-                  style={{ fontSize: '13px' }}
-                >
-                  {aiIdentifying
-                    ? <><Loader2 size={14} className="spin" /> Identifying…</>
-                    : <><Sparkles size={14} /> Identify Product</>}
-                </button>
-                <input ref={frontFileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setFrontFile(f); }} />
-                <input ref={backFileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setBackFile(f); }} />
-              </div>
-            )}
 
             <div className="form-group">
               <label>{tr('productNameLabel')} *</label>
