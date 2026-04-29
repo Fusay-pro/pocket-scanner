@@ -40,6 +40,7 @@ export default function ScanPage() {
   const [mode, setMode] = useState<Mode>('add');
   const [form, setForm] = useState(() => ({ ...EMPTY_FORM, unit: defaultUnit }));
   const [autoFilled, setAutoFilled] = useState(false);
+  const [lookupImageUrl, setLookupImageUrl] = useState<string | null>(null);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [receiveBarcode, setReceiveBarcode] = useState('');
@@ -82,6 +83,7 @@ export default function ScanPage() {
       if (result) {
         setForm(prev => ({ ...prev, name: result.name, category: result.category }));
         setAutoFilled(true);
+        setLookupImageUrl(result.imageUrl);
       }
     }, 600);
   }
@@ -89,6 +91,7 @@ export default function ScanPage() {
   function handleBarcodeChange(value: string) {
     setForm(prev => ({ ...prev, barcode: value }));
     setAutoFilled(false);
+    setLookupImageUrl(null);
     setExistingMatches([]);
     triggerLookup(value);
 
@@ -255,7 +258,7 @@ export default function ScanPage() {
         sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : null,
         minQty: form.minQty !== '' ? Number(form.minQty) : null,
         supplier: form.supplier.trim() || null,
-        imageUrl: null,
+        imageUrl: lookupImageUrl,
       });
       setRecentProducts(prev => [savedProd, ...prev].slice(0, 4));
       if (form.barcode.trim()) {
@@ -263,6 +266,7 @@ export default function ScanPage() {
       }
       setSaved(true);
       setForm({ ...EMPTY_FORM, unit: defaultUnit });
+      setLookupImageUrl(null);
       setScannedCode('');
       setAutoFilled(false);
       setPhotoPromptVisible(false);

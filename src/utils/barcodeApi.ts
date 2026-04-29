@@ -60,7 +60,25 @@ function guessCategory(name: string): string {
   return 'Other';
 }
 
-async function lookupOpenFoodFacts(code: string): Promise<{ name: string; category: string } | null> {
+export interface BarcodeLookup {
+  name: string;
+  category: string;
+  imageUrl: string | null;
+}
+
+function pickOffImage(p: Record<string, unknown>): string | null {
+  const candidates = [
+    p.image_front_small_url, p.image_small_url,
+    p.image_front_thumb_url, p.image_thumb_url,
+    p.image_front_url, p.image_url,
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.startsWith('http')) return c;
+  }
+  return null;
+}
+
+async function lookupOpenFoodFacts(code: string): Promise<BarcodeLookup | null> {
   try {
     const res = await fetch(
       `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
@@ -71,20 +89,20 @@ async function lookupOpenFoodFacts(code: string): Promise<{ name: string; catego
     const p = json.product;
     const name: string = p.product_name_en?.trim() || p.product_name?.trim() || '';
     if (!name) return null;
-    return { name, category: mapOffCategory(p.categories_tags) };
+    return { name, category: mapOffCategory(p.categories_tags), imageUrl: pickOffImage(p) };
   } catch {
     return null;
   }
 }
 
-async function lookupBarcodeMonster(code: string): Promise<{ name: string; category: string } | null> {
+async function lookupBarcodeMonster(code: string): Promise<BarcodeLookup | null> {
   try {
     const res = await fetch(`https://barcode.monster/${encodeURIComponent(code)}`);
     if (!res.ok) return null;
     const json = await res.json();
     const name: string = json.itemname?.trim() || '';
     if (!name) return null;
-    return { name, category: guessCategory(name) };
+    return { name, category: guessCategory(name), imageUrl: null };
   } catch {
     return null;
   }
@@ -92,11 +110,11 @@ async function lookupBarcodeMonster(code: string): Promise<{ name: string; categ
 
 export async function lookupBarcode(
   code: string
-): Promise<{ name: string; category: string } | null> {
-  // 1. Check local/Supabase cache first — fastest path
+): Promise<BarcodeLookup | null> {
+  // 1. Check local/Supabase cache first — fastest path (cache stores name + category only)
   const { getCachedBarcode, setCachedBarcode } = await import('./storage');
   const cached = await getCachedBarcode(code);
-  if (cached) return cached;
+  if (cached) return { ...cached, imageUrl: null };
 
   // 2. Query both APIs in parallel
   const [off, monster] = await Promise.allSettled([
