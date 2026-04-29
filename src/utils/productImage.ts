@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const BUCKET = 'product-images';
 
@@ -7,6 +7,7 @@ export async function uploadProductImage(
   productId: string,
   base64: string,
 ): Promise<string> {
+  if (!isSupabaseConfigured) throw new Error('Image storage requires Supabase to be configured.');
   const byteString = atob(base64.split(',')[1] ?? base64);
   const bytes = new Uint8Array(byteString.length);
   for (let i = 0; i < byteString.length; i++) {
@@ -29,5 +30,7 @@ export async function deleteProductImage(
   storeId: string,
   productId: string,
 ): Promise<void> {
-  await supabase.storage.from(BUCKET).remove([`${storeId}/${productId}.jpg`]);
+  if (!isSupabaseConfigured) return;
+  const { error } = await supabase.storage.from(BUCKET).remove([`${storeId}/${productId}.jpg`]);
+  if (error) throw error;
 }
