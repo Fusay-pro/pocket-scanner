@@ -435,11 +435,13 @@ export default function StorePage() {
                           <Package size={20} />
                         </div>
                       )}
-                      <div className={`expiry-badge badge-${status}`}>
-                        {status === 'expired' ? <AlertTriangle size={14} /> :
-                          status === 'soon' ? <Clock size={14} /> :
-                            status === 'ok' ? <CheckCircle size={14} /> : <Package size={14} />}
-                      </div>
+                      {status !== 'none' && (
+                        <div className={`expiry-badge badge-${status}`}>
+                          {status === 'expired' ? <AlertTriangle size={14} /> :
+                            status === 'soon' ? <Clock size={14} /> :
+                              <CheckCircle size={14} />}
+                        </div>
+                      )}
                       <div className="card-info">
                         <h3>{product.name}</h3>
                         <div className="card-meta">

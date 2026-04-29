@@ -1353,6 +1353,19 @@ body {
 .mode-btn.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); font-weight: 700; }
 
 /* ===== Autofill chip ===== */
+.existing-barcode-notice {
+  background: var(--warn-light);
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
+}
+.existing-barcode-notice p { font-size: 13px; color: var(--text); margin: 0 0 10px; }
+.existing-barcode-actions { display: flex; gap: 8px; }
+.existing-barcode-actions .btn-ghost {
+  flex: 1; padding: 8px 12px; font-size: 13px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+}
 .autofill-chip {
   display: inline-flex;
   align-items: center;
@@ -1407,25 +1420,13 @@ body {
 }
 
 /* ── Batch Picker Modal ─────────────────────── */
-.batch-picker-modal {
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.batch-picker-subtitle {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin: 0 0 12px;
-}
-.batch-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.batch-picker-modal { max-height: 80vh; overflow-y: auto; }
+.batch-list { display: flex; flex-direction: column; gap: 8px; }
 .batch-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: 10px;
   border: 1.5px solid var(--border);
   background: var(--bg);
@@ -1435,23 +1436,24 @@ body {
   transition: background 0.15s;
 }
 .batch-item:hover { background: var(--surface-2); }
-.batch-item-expired { border-color: var(--danger); }
-.batch-item-soon    { border-color: var(--warn); }
-.batch-status-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.status-expired { background: var(--danger-light); color: var(--danger); }
-.status-soon    { background: var(--warn-light);   color: var(--warn); }
-.status-ok      { background: var(--success-light); color: var(--success); }
-.status-none    { background: var(--surface-2); color: var(--text-muted); }
-.batch-expiry { font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
-.batch-qty { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.batch-recommended {
-  font-size: 11px;
-  font-weight: 500;
-  background: var(--success-light);
-  color: var(--success);
-  padding: 1px 6px;
-  border-radius: 4px;
+.batch-thumb {
+  width: 48px; height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
 }
+.batch-thumb-placeholder {
+  width: 48px; height: 48px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.batch-info { flex: 1; min-width: 0; }
+.batch-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.batch-qty  { font-size: 12px; color: var(--text-muted); }
+.batch-price { font-size: 15px; font-weight: 700; color: var(--success); flex-shrink: 0; }
 
 /* ── Bulk Delete ─────────────────────────────── */
 .bulk-select-bar {

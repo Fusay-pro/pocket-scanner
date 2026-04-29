@@ -49,6 +49,9 @@ export default function ScanPage() {
   const [receiveLookupDone, setReceiveLookupDone] = useState(false);
   const receiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [existingMatches, setExistingMatches] = useState<Product[]>([]);
+  const existingCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [photoPromptVisible, setPhotoPromptVisible] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -81,7 +84,23 @@ export default function ScanPage() {
   function handleBarcodeChange(value: string) {
     setForm(prev => ({ ...prev, barcode: value }));
     setAutoFilled(false);
+    setExistingMatches([]);
     triggerLookup(value);
+
+    if (existingCheckTimer.current) clearTimeout(existingCheckTimer.current);
+    if (!value.trim() || !storeId) return;
+    existingCheckTimer.current = setTimeout(async () => {
+      const prods = await getProductsByStore(storeId);
+      setExistingMatches(prods.filter(p => p.barcode === value.trim()));
+    }, 600);
+  }
+
+  function switchToReceive() {
+    const barcode = form.barcode;
+    setExistingMatches([]);
+    setMode('receive');
+    setReceiveBarcode(barcode);
+    handleReceiveBarcodeChange(barcode);
   }
 
   function handleReceiveBarcodeChange(value: string) {
@@ -401,6 +420,23 @@ export default function ScanPage() {
               <label>{tr('barcodeLabel')}</label>
               <input value={form.barcode} onChange={e => handleField('barcode', e.target.value)} placeholder={tr('scanOrEnterManually')} />
             </div>
+
+            {existingMatches.length > 0 && (
+              <div className="existing-barcode-notice">
+                <p>
+                  <strong>{existingMatches[0].name}</strong> already exists with this barcode
+                  {existingMatches.length > 1 ? ` (${existingMatches.length} batches)` : ''}.
+                </p>
+                <div className="existing-barcode-actions">
+                  <button type="button" className="btn-primary" onClick={switchToReceive}>
+                    <RotateCcw size={14} /> Receive Stock
+                  </button>
+                  <button type="button" className="btn-ghost" onClick={() => setExistingMatches([])}>
+                    Add New Batch
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="form-group">
               <label>{tr('productNameLabel')} *</label>
