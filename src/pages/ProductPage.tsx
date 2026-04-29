@@ -1,11 +1,12 @@
 import { errMsg } from '../utils/errMsg';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Save, Trash2, Package, AlertTriangle, CheckCircle,
-  Clock, Calendar, Loader2, Tag, Hash, Layers, DollarSign, Truck
+  Clock, Calendar, Loader2, Tag, Hash, Layers, DollarSign, Truck, Camera
 } from 'lucide-react';
 import { getProducts, updateProduct, deleteProduct, getStoreRole, type MemberRole } from '../utils/storage';
+import { uploadProductImage } from '../utils/productImage';
 import { getExpiryStatus, formatDate } from '../types';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { useSettings } from '../contexts/SettingsContext';
@@ -39,6 +40,8 @@ export default function ProductPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isOwner = !isSupabaseConfigured || role === 'owner';
 
@@ -114,6 +117,41 @@ export default function ProductPage() {
     } catch (e) { setError(errMsg(e)); }
   }
 
+  async function handleChangePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !product) return;
+    setPhotoUploading(true);
+    try {
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const MAX = 800;
+          let { width, height } = img;
+          if (width > MAX || height > MAX) {
+            if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+            else { width = Math.round(width * MAX / height); height = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+          URL.revokeObjectURL(url);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = (err) => { URL.revokeObjectURL(url); reject(err); };
+        img.src = url;
+      });
+      const imageUrl = await uploadProductImage(product.storeId, product.id, b64);
+      await updateProduct(product.id, { imageUrl });
+      setProduct(prev => prev ? { ...prev, imageUrl } : prev);
+    } catch {
+      setError('Photo upload failed');
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
   if (loading) return (
     <div className="page"><div className="empty-state"><Loader2 size={32} className="spin" /></div></div>
   );
@@ -144,6 +182,34 @@ export default function ProductPage() {
 
       {saved && <div className="toast success"><CheckCircle size={18} /> {tr('savedToast')}</div>}
       {error && <div className="error-bar" onClick={() => setError('')}>{error}</div>}
+
+      <div className="product-hero-wrap">
+        {product.imageUrl ? (
+          <>
+            <img src={product.imageUrl} className="product-hero" alt="" />
+            <button
+              className="change-photo-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={photoUploading}
+            >
+              <Camera size={12} /> {photoUploading ? 'Uploading…' : 'Change photo'}
+            </button>
+          </>
+        ) : (
+          <div className="product-hero-placeholder" onClick={() => fileInputRef.current?.click()}>
+            <Camera size={28} />
+            <span>Add photo</span>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: 'none' }}
+          onChange={handleChangePhoto}
+        />
+      </div>
 
       {/* ── Hero ── */}
       <div className="pp-hero" style={{ '--status-color': cfg.bg, '--status-light': cfg.light } as React.CSSProperties}>
