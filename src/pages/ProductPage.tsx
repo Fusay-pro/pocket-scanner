@@ -118,6 +118,7 @@ export default function ProductPage() {
   }
 
   async function handleChangePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    if (photoUploading) return;
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file || !product) return;
