@@ -429,7 +429,7 @@ export default function StorePage() {
                         />
                       )}
                       {product.imageUrl ? (
-                        <img src={product.imageUrl} className="product-thumb" alt={product.name} />
+                        <img src={product.imageUrl} className="product-thumb" alt="" />
                       ) : (
                         <div className="product-thumb-placeholder">
                           <Package size={20} />
