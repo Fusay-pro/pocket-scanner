@@ -64,6 +64,7 @@ function rowToProduct(row: any): Product {
     costPrice: row.cost_price ?? null,
     sellPrice: row.sell_price ?? null,
     supplier: row.supplier ?? null,
+    imageUrl: row.image_url ?? null,
   };
 }
 
@@ -164,6 +165,7 @@ export async function saveProduct(product: Omit<Product, 'id' | 'addedAt'>): Pro
     cost_price: product.costPrice ?? null,
     sell_price: product.sellPrice ?? null,
     supplier: product.supplier ?? null,
+    image_url: product.imageUrl ?? null,
   }).select().single();
   if (error) throw error;
   return rowToProduct(data);
@@ -187,6 +189,7 @@ export async function updateProduct(id: string, updates: Partial<Omit<Product, '
   if (updates.costPrice  !== undefined) dbUpdates.cost_price  = updates.costPrice;
   if (updates.sellPrice  !== undefined) dbUpdates.sell_price  = updates.sellPrice;
   if (updates.supplier   !== undefined) dbUpdates.supplier    = updates.supplier;
+  if (updates.imageUrl   !== undefined) dbUpdates.image_url   = updates.imageUrl;
   const { error } = await supabase.from('products').update(dbUpdates).eq('id', id);
   if (error) throw error;
 }
@@ -244,6 +247,7 @@ export async function receiveStock(
     quantity: qty,
     expiryDate,
     notes: '',
+    imageUrl: null,
   });
 }
 

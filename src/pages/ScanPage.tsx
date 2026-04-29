@@ -192,6 +192,7 @@ export default function ScanPage() {
         sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : null,
         minQty: form.minQty !== '' ? Number(form.minQty) : null,
         supplier: form.supplier.trim() || null,
+        imageUrl: null,
       });
       setRecentProducts(prev => [savedProd, ...prev].slice(0, 4));
       if (form.barcode.trim()) {

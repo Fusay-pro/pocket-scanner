@@ -20,6 +20,7 @@ export interface Product {
   costPrice: number | null;
   sellPrice: number | null;
   supplier: string | null;
+  imageUrl: string | null;
 }
 
 export type ExpiryStatus = 'expired' | 'soon' | 'ok' | 'none';
