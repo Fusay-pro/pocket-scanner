@@ -428,6 +428,13 @@ export default function StorePage() {
                           }}
                         />
                       )}
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} className="product-thumb" alt={product.name} />
+                      ) : (
+                        <div className="product-thumb-placeholder">
+                          <Package size={20} />
+                        </div>
+                      )}
                       <div className={`expiry-badge badge-${status}`}>
                         {status === 'expired' ? <AlertTriangle size={14} /> :
                           status === 'soon' ? <Clock size={14} /> :
