@@ -66,7 +66,12 @@ export default function ScanPage() {
         .slice(0, 4);
       setRecentProducts(recent);
     });
-    return () => { stopScanner(); };
+    return () => {
+      stopScanner();
+      if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current);
+      if (receiveTimerRef.current) clearTimeout(receiveTimerRef.current);
+      if (existingCheckTimer.current) clearTimeout(existingCheckTimer.current);
+    };
   }, [storeId]);
 
   function triggerLookup(value: string) {
@@ -302,10 +307,10 @@ export default function ScanPage() {
   }
 
   async function handleReceive() {
-    if (!storeId || !receiveProduct || !receiveQty || !receiveExpiry) return;
+    if (!storeId || !receiveProduct || !receiveQty) return;
     setSaving(true);
     try {
-      await receiveStock(storeId, receiveBarcode.trim(), Number(receiveQty) || 1, receiveExpiry);
+      await receiveStock(storeId, receiveBarcode.trim(), Number(receiveQty) || 1, receiveExpiry || null);
       setSaved(true);
       setReceiveBarcode('');
       setReceiveProduct(null);
@@ -382,10 +387,10 @@ export default function ScanPage() {
                 </div>
               </div>
               <div className="form-group">
-                <label>{tr('expiryDateRequired')}</label>
+                <label>{tr('expiryDateLabel')}</label>
                 <input type="date" value={receiveExpiry} onChange={e => setReceiveExpiry(e.target.value)} />
               </div>
-              <button className="btn-primary full-width" onClick={handleReceive} disabled={!receiveQty || !receiveExpiry || saving}>
+              <button className="btn-primary full-width" onClick={handleReceive} disabled={!receiveQty || saving}>
                 {saving ? <><Loader2 size={16} className="spin" /> {tr('savingLabel')}</> : <><CheckCircle size={16} /> {tr('receiveBtn')}</>}
               </button>
             </>

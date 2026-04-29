@@ -1,6 +1,20 @@
 const MAX_MESSAGES = 30;
 const MAX_CONTENT_LENGTH = 4000;
 
+// Sliding-window rate limiter: 20 requests per 60 s per user
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 60_000;
+const rateLimitMap = new Map();
+
+function checkRateLimit(key) {
+  const now = Date.now();
+  const timestamps = (rateLimitMap.get(key) ?? []).filter(t => now - t < RATE_WINDOW_MS);
+  if (timestamps.length >= RATE_LIMIT) return false;
+  timestamps.push(now);
+  rateLimitMap.set(key, timestamps);
+  return true;
+}
+
 function getRequiredEnv(name) {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`Missing ${name}`);
@@ -20,17 +34,20 @@ function sanitizeMessages(messages) {
     .filter(message => message.content.trim());
 }
 
+// Returns the user's UUID on success, null on failure.
 async function verifySupabaseToken(token) {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)?.trim();
   const anonKey = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)?.trim();
-  if (!supabaseUrl || !anonKey || !token) return false;
+  if (!supabaseUrl || !anonKey || !token) return null;
   try {
     const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { Authorization: `Bearer ${token}`, apikey: anonKey },
     });
-    return res.ok;
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.id ?? null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -40,12 +57,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Require auth when Supabase is configured
+  // Require auth when Supabase is configured; derive rate-limit key from user ID or IP
   const supabaseConfigured = !!(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)?.trim();
+  let rateLimitKey;
   if (supabaseConfigured) {
     const token = req.headers['x-supabase-auth'];
-    const valid = await verifySupabaseToken(token);
-    if (!valid) return res.status(401).json({ error: 'Authentication required' });
+    const userId = await verifySupabaseToken(token);
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    rateLimitKey = userId;
+  } else {
+    rateLimitKey = req.headers['x-forwarded-for']?.split(',')[0].trim() ?? req.socket?.remoteAddress ?? 'local';
+  }
+
+  if (!checkRateLimit(rateLimitKey)) {
+    res.setHeader('Retry-After', '60');
+    return res.status(429).json({ error: 'Too many requests — please wait a moment' });
   }
 
   try {

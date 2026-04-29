@@ -38,12 +38,14 @@ export default function SellPage() {
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerStarted = useRef(false);
+  const productsRef = useRef<Product[]>([]);
 
   useEffect(() => {
     if (!storeId) return;
     Promise.all([getStores(), getProductsByStore(storeId)]).then(([stores, prods]) => {
       setStore(stores.find(s => s.id === storeId) || null);
       setProducts(prods);
+      productsRef.current = prods;
     });
     return () => { stopScanner(); };
   }, [storeId]);
@@ -60,18 +62,11 @@ export default function SellPage() {
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 120 } },
         (code) => {
-          // FEFO: among batches with the same barcode, sell the soonest-expiring one first
-          const matches = products.filter(p => p.barcode === code && p.quantity > 0);
-          matches.sort((a, b) => {
-            if (!a.expiryDate && !b.expiryDate) return 0;
-            if (!a.expiryDate) return 1;
-            if (!b.expiryDate) return -1;
-            return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
-          });
-          const found = matches[0];
+          const current = productsRef.current;
+          const found = current.find(p => p.barcode === code && p.quantity > 0);
           if (found) handleProductSelect(found);
           else {
-            const outOfStock = products.some(p => p.barcode === code);
+            const outOfStock = current.some(p => p.barcode === code);
             setError(outOfStock ? `All batches of this product are out of stock.` : `No product found for barcode: ${code}`);
           }
           stopScanner();
@@ -180,6 +175,7 @@ export default function SellPage() {
       // Refresh local product list
       const fresh = await getProductsByStore(storeId);
       setProducts(fresh);
+      productsRef.current = fresh;
       const nowLow = cart
         .map(item => fresh.find(p => p.id === item.product.id))
         .filter((p): p is NonNullable<typeof p> =>

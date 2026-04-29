@@ -219,15 +219,16 @@ export async function deleteAllProductsByStore(storeId: string): Promise<void> {
 }
 
 export async function receiveStock(
-  storeId: string, barcode: string, qty: number, expiryDate: string
+  storeId: string, barcode: string, qty: number, expiryDate: string | null
 ): Promise<Product> {
+  const normalizedExpiry = expiryDate?.trim() || null;
   const all = await getProductsByStore(storeId);
   const batches = all.filter(p => p.barcode === barcode);
 
   if (batches.length === 0) throw new Error('BARCODE_NOT_FOUND');
 
-  // Check for exact expiry date match
-  const existing = batches.find(p => p.expiryDate === expiryDate);
+  // Check for exact expiry date match (including both-null case)
+  const existing = batches.find(p => (p.expiryDate ?? null) === normalizedExpiry);
   if (existing) {
     await updateProduct(existing.id, { quantity: existing.quantity + qty });
     return { ...existing, quantity: existing.quantity + qty };
@@ -249,7 +250,7 @@ export async function receiveStock(
     minQty: template.minQty,
     supplier: template.supplier,
     quantity: qty,
-    expiryDate,
+    expiryDate: normalizedExpiry,
     notes: '',
     imageUrl: template.imageUrl ?? null,
   });
