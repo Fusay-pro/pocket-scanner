@@ -294,6 +294,13 @@ export default function SellPage() {
             <div className="cart-list">
               {cart.map(item => (
                 <div key={item.product.id} className="cart-item">
+                  {item.product.imageUrl ? (
+                    <img src={item.product.imageUrl} className="sell-thumb" alt="" />
+                  ) : (
+                    <div className="sell-thumb-placeholder">
+                      <Package size={18} />
+                    </div>
+                  )}
                   <div className="cart-item-info">
                     <p className="cart-item-name">{item.product.name}</p>
                     <p className="cart-item-meta">
