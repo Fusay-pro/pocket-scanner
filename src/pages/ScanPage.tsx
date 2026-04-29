@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ScanLine, Camera, CameraOff, CheckCircle, Save, Loader2, Clock, Sparkles, PackagePlus, RotateCcw } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { getStores, getProductsByStore, saveProduct, receiveStock, setCachedBarcode } from '../utils/storage';
+import { uploadProductImage } from '../utils/productImage';
 import { lookupBarcode } from '../utils/barcodeApi';
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../i18n';
@@ -47,6 +48,11 @@ export default function ScanPage() {
   const [receiveExpiry, setReceiveExpiry] = useState('');
   const [receiveLookupDone, setReceiveLookupDone] = useState(false);
   const receiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [photoPromptVisible, setPhotoPromptVisible] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!storeId) return;
@@ -171,12 +177,46 @@ export default function ScanPage() {
 
   function hasInvalidNum(v: string) { return v !== '' && (isNaN(Number(v)) || Number(v) < 0); }
 
+  function resizeImage(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 800;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+          else { width = Math.round(width * MAX / height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
   async function handleSave() {
     if (!storeId || !form.name.trim()) return;
     if (
       hasInvalidNum(form.quantity) || hasInvalidNum(form.costPrice) ||
       hasInvalidNum(form.sellPrice) || hasInvalidNum(form.minQty)
     ) { setError(tr('validationNumberInvalid')); return; }
+
+    if (!photoPromptVisible) {
+      setPhotoPromptVisible(true);
+      return;
+    }
+
+    await doSave();
+  }
+
+  async function doSave(imageUrl?: string) {
+    if (!storeId) return;
     setSaving(true);
     try {
       const savedProd = await saveProduct({
@@ -192,7 +232,7 @@ export default function ScanPage() {
         sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : null,
         minQty: form.minQty !== '' ? Number(form.minQty) : null,
         supplier: form.supplier.trim() || null,
-        imageUrl: null,
+        imageUrl: imageUrl ?? null,
       });
       setRecentProducts(prev => [savedProd, ...prev].slice(0, 4));
       if (form.barcode.trim()) {
@@ -202,11 +242,39 @@ export default function ScanPage() {
       setForm({ ...EMPTY_FORM, unit: defaultUnit });
       setScannedCode('');
       setAutoFilled(false);
+      setPhotoPromptVisible(false);
+      setPhotoBase64(null);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       setError(errMsg(e));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const b64 = await resizeImage(file);
+      setPhotoBase64(b64);
+    } catch {
+      setError('Could not process photo');
+    }
+  }
+
+  async function handlePhotoConfirm() {
+    if (!photoBase64 || !storeId) { await doSave(); return; }
+    setPhotoUploading(true);
+    try {
+      const tempId = `temp-${Date.now()}`;
+      const url = await uploadProductImage(storeId, tempId, photoBase64);
+      await doSave(url);
+    } catch {
+      setError('Photo upload failed — product saved without photo');
+      await doSave();
+    } finally {
+      setPhotoUploading(false);
     }
   }
 
@@ -390,6 +458,47 @@ export default function ScanPage() {
               <input value={form.supplier} onChange={e => handleField('supplier', e.target.value)} placeholder="e.g. ABC Distributors" />
             </div>
 
+            {photoPromptVisible && (
+              <div className="photo-prompt">
+                <p className="photo-prompt-label">Add a photo? (optional)</p>
+                {photoBase64 ? (
+                  <img src={photoBase64} className="photo-preview" alt="preview" />
+                ) : null}
+                <div className="photo-prompt-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Camera size={15} /> {photoBase64 ? 'Retake' : 'Take Photo'}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    style={{ display: 'none' }}
+                    onChange={handlePhotoSelected}
+                  />
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handlePhotoConfirm}
+                    disabled={photoUploading || saving}
+                  >
+                    {photoUploading ? <><Loader2 size={14} className="spin" /> Uploading…</> : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => doSave()}
+                    disabled={saving}
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
             <button className="btn-primary full-width" onClick={handleSave} disabled={!form.name.trim() || saving}>
               {saving ? <><Loader2 size={16} className="spin" /> {tr('savingLabel')}</> : <><Save size={18} /> {tr('saveAndScanNext')}</>}
             </button>
