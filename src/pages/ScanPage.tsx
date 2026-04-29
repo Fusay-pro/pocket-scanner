@@ -195,7 +195,10 @@ export default function ScanPage() {
         URL.revokeObjectURL(url);
         resolve(canvas.toDataURL('image/jpeg', 0.82));
       };
-      img.onerror = reject;
+      img.onerror = (err) => {
+        URL.revokeObjectURL(url);
+        reject(err);
+      };
       img.src = url;
     });
   }
@@ -207,16 +210,12 @@ export default function ScanPage() {
       hasInvalidNum(form.sellPrice) || hasInvalidNum(form.minQty)
     ) { setError(tr('validationNumberInvalid')); return; }
 
-    if (!photoPromptVisible) {
-      setPhotoPromptVisible(true);
-      return;
-    }
-
-    await doSave();
+    if (photoPromptVisible) return;
+    setPhotoPromptVisible(true);
   }
 
   async function doSave(imageUrl?: string) {
-    if (!storeId) return;
+    if (!storeId || saving) return;
     setSaving(true);
     try {
       const savedProd = await saveProduct({
@@ -254,6 +253,7 @@ export default function ScanPage() {
 
   async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     try {
       const b64 = await resizeImage(file);
