@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ScanLine, Camera, CameraOff, CheckCircle, Save, Loader2, Clock, Sparkles, PackagePlus, RotateCcw } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { getStores, getProductsByStore, saveProduct, receiveStock, setCachedBarcode } from '../utils/storage';
+import { getStores, getProductsByStore, saveProduct, updateProduct, receiveStock, setCachedBarcode } from '../utils/storage';
 import { uploadProductImage } from '../utils/productImage';
 import { lookupBarcode } from '../utils/barcodeApi';
 import { useSettings } from '../contexts/SettingsContext';
@@ -233,8 +233,8 @@ export default function ScanPage() {
     setPhotoPromptVisible(true);
   }
 
-  async function doSave(imageUrl?: string) {
-    if (!storeId || saving) return;
+  async function doSave() {
+    if (!storeId || saving) return null;
     setSaving(true);
     try {
       const savedProd = await saveProduct({
@@ -250,7 +250,7 @@ export default function ScanPage() {
         sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : null,
         minQty: form.minQty !== '' ? Number(form.minQty) : null,
         supplier: form.supplier.trim() || null,
-        imageUrl: imageUrl ?? null,
+        imageUrl: null,
       });
       setRecentProducts(prev => [savedProd, ...prev].slice(0, 4));
       if (form.barcode.trim()) {
@@ -263,8 +263,10 @@ export default function ScanPage() {
       setPhotoPromptVisible(false);
       setPhotoBase64(null);
       setTimeout(() => setSaved(false), 2000);
+      return savedProd;
     } catch (e) {
       setError(errMsg(e));
+      return null;
     } finally {
       setSaving(false);
     }
@@ -283,15 +285,17 @@ export default function ScanPage() {
   }
 
   async function handlePhotoConfirm() {
-    if (!photoBase64 || !storeId) { await doSave(); return; }
     setPhotoUploading(true);
     try {
-      const tempId = `temp-${Date.now()}`;
-      const url = await uploadProductImage(storeId, tempId, photoBase64);
-      await doSave(url);
-    } catch {
-      setError('Photo upload failed — product saved without photo');
-      await doSave();
+      const savedProd = await doSave();
+      if (savedProd && photoBase64 && storeId) {
+        try {
+          const url = await uploadProductImage(storeId, savedProd.id, photoBase64);
+          await updateProduct(savedProd.id, { imageUrl: url });
+        } catch {
+          setError('Photo upload failed — product saved without photo');
+        }
+      }
     } finally {
       setPhotoUploading(false);
     }

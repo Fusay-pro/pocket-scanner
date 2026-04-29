@@ -20,10 +20,32 @@ function sanitizeMessages(messages) {
     .filter(message => message.content.trim());
 }
 
+async function verifySupabaseToken(token) {
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)?.trim();
+  const anonKey = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)?.trim();
+  if (!supabaseUrl || !anonKey || !token) return false;
+  try {
+    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: anonKey },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Require auth when Supabase is configured
+  const supabaseConfigured = !!(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)?.trim();
+  if (supabaseConfigured) {
+    const token = req.headers['x-supabase-auth'];
+    const valid = await verifySupabaseToken(token);
+    if (!valid) return res.status(401).json({ error: 'Authentication required' });
   }
 
   try {

@@ -1,5 +1,6 @@
 import { X, Package } from 'lucide-react';
 import type { Product } from '../types';
+import { formatDate } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 
 interface Props {
@@ -33,6 +34,7 @@ export default function BatchPickerModal({ batches, onSelect, onClose }: Props) 
               <div className="batch-info">
                 <div className="batch-name">{batch.name}</div>
                 <div className="batch-qty">{batch.quantity} {batch.unit} in stock</div>
+                {batch.expiryDate && <div className="batch-expiry">Exp: {formatDate(batch.expiryDate)}</div>}
               </div>
               {batch.sellPrice != null && (
                 <div className="batch-price">{currencySymbol}{batch.sellPrice.toFixed(2)}</div>

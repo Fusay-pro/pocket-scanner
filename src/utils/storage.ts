@@ -4,6 +4,7 @@
  * The UI additionally hides controls based on role (defence in depth).
  */
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { deleteProductImage } from './productImage';
 import type { Store, Product } from '../types';
 
 export type MemberRole = 'owner' | 'worker';
@@ -200,6 +201,9 @@ export async function deleteProduct(id: string): Promise<void> {
     lsSet(LS_PRODUCTS, lsGet<Product>(LS_PRODUCTS).filter(p => p.id !== id));
     return;
   }
+  // Best-effort image cleanup before row deletion
+  const { data } = await supabase.from('products').select('store_id').eq('id', id).maybeSingle();
+  if (data?.store_id) deleteProductImage(data.store_id, id).catch(() => {});
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) throw error;
 }
@@ -247,7 +251,7 @@ export async function receiveStock(
     quantity: qty,
     expiryDate,
     notes: '',
-    imageUrl: null,
+    imageUrl: template.imageUrl ?? null,
   });
 }
 

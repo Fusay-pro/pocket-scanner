@@ -226,10 +226,10 @@ drop policy if exists "barcode_cache_select" on barcode_cache;
 drop policy if exists "barcode_cache_insert" on barcode_cache;
 drop policy if exists "barcode_cache_update" on barcode_cache;
 
--- Anyone (authenticated or not) can read and write cache entries
+-- Anyone can read; only authenticated users can write (prevents anonymous cache poisoning)
 create policy "barcode_cache_select" on barcode_cache for select using (true);
-create policy "barcode_cache_insert" on barcode_cache for insert with check (true);
-create policy "barcode_cache_update" on barcode_cache for update using (true);
+create policy "barcode_cache_insert" on barcode_cache for insert with check (auth.uid() is not null);
+create policy "barcode_cache_update" on barcode_cache for update using (auth.uid() is not null);
 
 -- ── Migration: add missing columns to existing databases ──────
 -- Safe to run even if columns already exist (IF NOT EXISTS).

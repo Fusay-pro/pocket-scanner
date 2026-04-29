@@ -197,7 +197,7 @@ export default function ProductPage() {
             </button>
           </>
         ) : (
-          <div className="product-hero-placeholder" onClick={() => fileInputRef.current?.click()}>
+          <div className="product-hero-placeholder" onClick={() => !photoUploading && fileInputRef.current?.click()} style={{ cursor: photoUploading ? 'default' : 'pointer' }}>
             <Camera size={28} />
             <span>Add photo</span>
           </div>
